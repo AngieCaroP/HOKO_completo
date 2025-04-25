@@ -1,8 +1,7 @@
 # envios/views.py
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Producto, Stock, GuiaEnvio, Bodega, Transportadora
-from .forms import ProductoForm, StockForm, GuiaEnvioForm, BodegaForm, TransportadoraForm
-from .forms import GuiaEnvioForm
+from .models import Producto, Stock,  Bodega
+from .forms import ProductoForm, StockForm
 from django.contrib import messages
 from django.db.models import Q
 
@@ -59,6 +58,14 @@ def listar_stocks(request):
         'bodegas': Bodega.objects.all()
     })
 
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Stock
+from .forms import StockForm
+
+def listar_stocks(request):  # Esta función debe existir
+    stocks = Stock.objects.all()
+    return render(request, 'stocks.html', {'stocks': stocks})
+
 def crear_stock(request):
     if request.method == 'POST':
         form = StockForm(request.POST)
@@ -69,7 +76,7 @@ def crear_stock(request):
         form = StockForm()
     return render(request, 'crear.html', {'form': form})
 
-def actualizar_stock(request, id):
+def editar_stock(request, id):  # ¡Esta es la función faltante!
     stock = get_object_or_404(Stock, id=id)
     if request.method == 'POST':
         form = StockForm(request.POST, instance=stock)
@@ -78,15 +85,14 @@ def actualizar_stock(request, id):
             return redirect('listar_stocks')
     else:
         form = StockForm(instance=stock)
-    return render(request, 'editar.html', {'form': form})
+    return render(request, 'editar_stock.html', {'form': form})
 
 def eliminar_stock(request, id):
     stock = get_object_or_404(Stock, id=id)
     if request.method == 'POST':
         stock.delete()
         return redirect('listar_stocks')
-    return render(request, 'eliminar.html', {'stock': stock})
-
+    return render(request, 'eliminar_stock.html', {'stock': stock})
 
 #nose
 

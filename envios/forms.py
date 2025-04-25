@@ -1,16 +1,7 @@
 from django import forms
-from .models import GuiaEnvio, Producto, Stock, Bodega, Transportadora
+from .models import  Producto, Stock, Bodega  # Asegúrate de importar Bodega de models.py
 
-class GuiaEnvioForm(forms.ModelForm):
-    class Meta:
-        model = GuiaEnvio
-        fields = '__all__'
-        exclude = ['numero_guia', 'fecha_creacion', 'fecha_actualizacion']
-        widgets = {
-            'cliente_direccion': forms.Textarea(attrs={'rows': 3}),
-            'contenido': forms.TextInput(attrs={'maxlength': '39'}),
-        }
-
+#producto
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
@@ -23,6 +14,7 @@ class ProductoForm(forms.ModelForm):
             'precio': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+#stock
 class StockForm(forms.ModelForm):
     class Meta:
         model = Stock
@@ -34,12 +26,8 @@ class StockForm(forms.ModelForm):
             'umbral_minimo': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-class BodegaForm(forms.ModelForm):
-    class Meta:
-        model = Bodega
-        fields = '__all__'
-
-class TransportadoraForm(forms.ModelForm):
-    class Meta:
-        model = Transportadora
-        fields = '__all__'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['bodega'].queryset = Bodega.objects.filter(
+            nombre__in=['GUAYAQUIL', 'QUITO']  # Filtra solo las bodegas específicas
+        )
