@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Stocks - HOKO{% endblock %}
+
+{% block content %}
+<div class="products-container">
+  <h1>Gestión de Stocks</h1>
+  
+  <!-- Barra de acciones -->
+  <div class="products-actions">
+    <input type="text" id="search-input" placeholder="Buscar stock..." class="search-input">
+    
+    <div class="action-buttons">
+      <a href="{% url 'crear_stock' %}" class="btn crear">➕ Nuevo Stock</a>
+      
+      <!-- Filtros -->
+      <div class="filters">
+        <select id="filter-status" class="filter-select">
+          <option value="">Todos los estados</option>
+          <option value="ok">Stock OK</option>
+          <option value="bajo">Stock Bajo</option>
+          <option value="sin">Sin Stock</option>
+        </select>
+        
+        <select id="filter-bodega" class="filter-select">
+          <option value="">Todas las bodegas</option>
+          <!-- Bodegas fijas -->
+          <option value="guayaquil">GUAYAQUIL - Bodega Principal</option>
+          <option value="quito">QUITO - Bodega Norte</option>
+          <!-- Bodegas dinámicas de la base de datos -->
+          {% for bodega in bodegas %}
+          <option value="{{ bodega.id }}">{{ bodega.nombre|upper }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de stocks -->
+  <div class="table-wrapper">
+    <table class="products-table" id="stocks-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Producto</th>
+          <th>Bodega</th>
+          <th>Stock</th>
+          <th>Umbral</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stock in stocks %}
+        <tr data-id="{{ stock.id }}" 
+            data-producto="{{ stock.producto.nombre|lower }}" 
+            data-bodega="{% if 'guayaquil' in stock.bodega.nombre|lower %}guayaquil{% elif 'quito' in stock.bodega.nombre|lower %}quito{% else %}{{ stock.bodega.id }}{% endif %}"
+            data-status="{% if stock.stock_actual <= 0 %}sin{% elif stock.stock_actual < stock.umbral_minimo %}bajo{% else %}ok{% endif %}">
+          <td>{{ stock.id }}</td>
+          <td>{{ stock.producto.nombre }}</td>
+          <td>
+            {% if 'guayaquil' in stock.bodega.nombre|lower %}
+              GUAYAQUIL - Bodega Principal
+            {% elif 'quito' in stock.bodega.nombre|lower %}
+              QUITO - Bodega Norte
+            {% else %}
+              {{ stock.bodega.nombre }}
+            {% endif %}
+          </td>
+          <td>{{ stock.stock_actual }}</td>
+          <td>{{ stock.umbral_minimo }}</td>
+          <td>
+            {% if stock.stock_actual <= 0 %}
+              <span class="status-badge sin-stock">Sin Stock</span>
+            {% elif stock.stock_actual < stock.umbral_minimo %}
+              <span class="status-badge bajo-stock">Bajo Stock</span>
+            {% else %}
+              <span class="status-badge ok-stock">OK</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            <a href="{% url 'editar_stock' stock.id %}" class="btn-action edit-btn" title="Editar">✏️</a>
+            <form action="{% url 'eliminar_stock' stock.id %}" method="post" class="delete-form">
+              {% csrf_token %}
+              <button type="submit" class="btn-action delete-btn" title="Eliminar" onclick="return confirm('¿Estás seguro?')">🗑️</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Búsqueda instantánea
+  const searchInput = document.getElementById('search-input');
+  const tableRows = document.querySelectorAll('#stocks-table tbody tr');
+  
+  searchInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    tableRows.forEach(row => {
+      const rowText = row.textContent.toLowerCase();
+      row.style.display = rowText.includes(term) ? '' : 'none';
+    });
+  });
+
+  // Filtros combinados
+  const filterStatus = document.getElementById('filter-status');
+  const filterBodega = document.getElementById('filter-bodega');
+  
+  [filterStatus, filterBodega].forEach(filter => {
+    filter.addEventListener('change', applyFilters);
+  });
+
+  function applyFilters() {
+    const statusValue = filterStatus.value;
+    const bodegaValue = filterBodega.value;
+    
+    tableRows.forEach(row => {
+      const rowStatus = row.dataset.status;
+      const rowBodega = row.dataset.bodega;
+      
+      const statusMatch = !statusValue || rowStatus === statusValue;
+      const bodegaMatch = !bodegaValue || rowBodega === bodegaValue;
+      
+      row.style.display = statusMatch && bodegaMatch ? '' : 'none';
+    });
+  }
+  
+  // Inicializar filtros
+  applyFilters();
+});
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Eliminar Stock</h1>
+
+<p>¿Estás seguro que deseas marcar como eliminado el stock "{{ stock }}"?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn eliminar">🗑️ Sí, eliminar</button>
+    <a href="{% url 'stocks' %}" class="btn cancelar">✖ Cancelar</a>
+</form>
+{% endblock %}

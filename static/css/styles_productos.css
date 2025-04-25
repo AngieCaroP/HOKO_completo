@@ -1,0 +1,509 @@
+/* Usando Ubuntu por defecto */
+body {
+  font-family: 'Ubuntu', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f5f5f5;
+  color: #070E27;
+  font-size: 18px; /* Tamaño base de la fuente */
+}
+
+/* Usando Noto Sans en títulos */
+h1, h2, h3 {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 32px; /* Tamaño para títulos */
+  color: #070E27;
+}
+
+h4 {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14 px; /* Tamaño para títulos */
+  color: #070E27;
+}
+
+/* Layout general */
+.layout-container {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+}
+
+/* Menú lateral */
+.sidebar {
+  width: 250px;
+  background-color: #070E27;
+  height: 100vh;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+/* Encabezado del menú lateral */
+.sidebar-header {
+  display: flex;
+  justify-content: flex-start; /* Alinea el contenido al inicio */
+  align-items: center; /* Centra verticalmente */
+  padding: 15px 20px;
+  border-bottom: 1px solid white;
+  position: relative;
+  height: 60px;
+  width: 100%;
+}
+
+/* Nombre HOKO centrado y oculto por defecto */
+.sidebar-header .logo-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  margin: 0;
+  flex-grow: 1;
+  
+  transition: opacity 0.3s ease-in-out; /* Transición suave para mostrarlo */
+}
+
+/* Menú Hamburguesa (tres líneas) - Fijo a la izquierda */
+.menu-toggle {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  position: absolute;
+  left: 20px; /* Alineado a la izquierda */
+  display: block; /* Visible solo cuando el nombre "HOKO" no está visible */
+  opacity: 1; /* Visible por defecto */
+  transition: opacity 0.3s ease-in-out; /* Transición suave para mostrarlo */
+}
+
+/* Menú de elementos */
+.menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu a {
+  display: block;
+  padding: 15px 20px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.menu a:hover {
+  background-color: #1E3A8A;
+  font-weight: bold;
+}
+
+/* Contenido principal */
+.main-content {
+  margin-left: 250px;
+  flex-grow: 1;
+  padding: 30px;
+}
+
+.main-content h1 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #070E27;
+  border-bottom: 2px solid #070E27;
+  margin-bottom: 30px;
+  padding-bottom: 10px;
+}
+
+/* Contenedor de productos */
+.products-container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+/* Botones de acción */
+.products-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Aseguramos que los botones de acción queden en línea horizontal */
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start; /* En fila */
+  gap: 10px; /* Espaciado entre los botones */
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  font-size: 18px; /* Aumentamos el tamaño del input */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  height: 1.5 rem; /* Ajusta según lo que necesites */
+}
+
+/* Botones */
+.btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  background-color: #4a90e2;
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  height: 2.5rem; /* Ajusta según lo que necesites */
+}
+
+.dropdown {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: auto;
+}
+
+.popover-toggle {
+  padding: 0.6rem 2.2rem;
+  border: none;
+  border-radius: 8px;
+  background-color: #4a90e2; /* Puedes cambiar el color si prefieres otro */
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  height: 2.5rem; /* Ajuste para igualar el tamaño de los otros botones */
+}
+
+.dropdown:focus {
+  border-color: #4a90e2;
+  outline: none;
+}
+
+.btn.buscar {
+  background-color: #1E3A8A;
+}
+
+.btn.crear {
+  background-color: #28A745;
+}
+
+.btn.ver {
+  background-color: #c9c0a4;
+  color: #000;
+}
+
+.btn.editar {
+  background-color: #FFC107;
+  color: #000;
+}
+
+.btn.eliminar {
+  background-color: #DC3545;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+
+
+.popover-toggle:hover {
+  background-color:rgba(74, 144, 226, 0.8); /* Un color más oscuro para el hover */
+}
+
+/* Estilo mejorado para el dropdown de nueva acción */
+.dropdown-nueva-accion {
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  background-color: #fff;
+  width: 220px;
+  margin-left: 12px;
+  cursor: pointer;
+  
+}
+
+
+
+/* Tabla de productos */
+.table-wrapper {
+  overflow-x: auto; /* Habilitamos el scroll horizontal */
+  margin-top: 20px;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 18px; /* Aumentamos el tamaño de la fuente en la tabla */
+  text-align: left;
+}
+
+.products-table th, .products-table td {
+  padding: 12px 15px; /* Aumentamos el padding para que sea más espacioso */
+  border-bottom: 1px solid #ccc;
+  vertical-align: middle;
+}
+
+/* Encabezado de la tabla */
+.products-table th {
+  background-color: #070E27;
+  color: white;
+}
+
+/* Imagen en la tabla */
+.img-thumb {
+  width: 60px; /* Aumentamos el tamaño de la imagen */
+  height: auto;
+  border-radius: 5px;
+}
+
+/* Estilo del option Importar Productos */
+select {
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #fff;
+  color: #070E27;
+  cursor: pointer;
+  appearance: none; /* Elimina la apariencia predeterminada del select en algunos navegadores */
+}
+
+/* Estilo específico para el option Importar Productos */
+select option[disabled] {
+  color: #ccc;
+  background-color: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Asegura que el option Importar Productos tenga el mismo tamaño de botón */
+select option {
+  padding: 15px;
+  font-size: 16px;
+}
+
+/* Agrega estilo al select cuando se le hace focus */
+select:focus {
+  border-color: #070E27;
+  outline: none;
+}
+
+/* Opcional: estiliza el área del select para que se vea como un botón */
+select {
+  text-align: center; /* Centra el texto dentro del select */
+}
+
+/*Codigo filtro*/
+
+/* Estilo del contenedor del Popover */
+.popover-container {
+  position: relative;
+}
+
+/* Estilo del Popover */
+.popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px; /* Esquinas redondeadas */
+  padding: 15px;
+  width: 300px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden; /* Oculto por defecto */
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s linear 0.3s; /* Animación suave */
+}
+
+/* Mostrar el popover cuando la clase 'active' está presente */
+.popover.active {
+  opacity: 1;
+  visibility: visible; /* Se muestra */
+  transform: translateY(0); /* Desplazamiento hacia arriba */
+  transition: opacity 0.3s ease, transform 0.3s ease; /* Animación suave */
+}
+
+/* Estilo de los encabezados dentro del Popover */
+.popover h4 {
+  margin-top: 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+/* Estilo para los selects dentro del Popover */
+.popover select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  font-size: 0.9rem;
+  color: #333;
+  transition: border-color 0.3s ease;
+}
+
+/* Efecto cuando se enfoca un select */
+.popover select:focus {
+  border-color: #070E27; /* Color de enfoque */
+  outline: none; /* Eliminar borde predeterminado */
+}
+
+/* Estilo de los elementos de opción en el select */
+.popover option {
+  font-size: 0.9rem;
+}
+
+
+
+
+/* Responsive para tablets y pantallas medianas */
+@media screen and (max-width: 1100px) {
+  .layout-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+
+  .sidebar-header {
+    height: 60px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #070E27;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+  }
+
+  .logo-title {
+    flex-grow: 1;
+    text-align: center;
+    cursor: pointer;
+    color: white;
+  }
+
+  .menu {
+    display: none;
+    flex-direction: column;
+    background-color: #070E27;
+    padding: 0;
+    width: 100%;
+  }
+
+  .menu.show {
+    display: flex;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    z-index: 999;
+    width: 100%;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 20px;
+    margin-top: 60px;
+  }
+
+  .menu.show ~ .main-content {
+    margin-top: 120px;
+  }
+
+  .products-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn, .dropdown {
+    width: 100%;
+  }
+
+  .menu-toggle {
+    background: none;
+    border: none;
+    color: white;
+  }
+
+  .menu a {
+    padding: 15px 20px;
+    color: white;
+    text-decoration: none;
+  }
+
+  .menu a:hover {
+    background-color: #1E3A8A;
+  }
+
+  .popover {
+    position: fixed;
+    top: 100px; /* Ajusta según la altura de tu header */
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: 90%;
+    z-index: 1001;
+    border-radius: 12px;
+    padding: 20px;
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .popover h4 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .popover select {
+    font-size: 1rem;
+    padding: 10px;
+    margin-bottom: 18px;
+  }
+
+  .btn-filtros {
+    width: 100%; /* Que el botón de filtros ocupe todo el ancho si se desea */
+    margin-bottom: 10px;
+  }
+}
+
+
+

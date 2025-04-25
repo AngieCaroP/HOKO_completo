@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Productos - HOKO{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+  <h1>{{ producto.nombre }}</h1>
+  <div class="product-detail">
+    {% if producto.imagen %}
+      <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="product-image">
+    {% endif %}
+    <div class="product-info">
+      <p><strong>Referencia:</strong> {{ producto.referencia|default:"-" }}</p>
+      <p><strong>Costo:</strong> ${{ producto.costo|floatformat:2 }}</p>
+      <p><strong>Precio:</strong> ${{ producto.precio|floatformat:2 }}</p>
+    </div>
+  </div>
+  <a href="{% url 'listar_productos' %}" class="btn">Volver</a>
+</div>
+{% endblock %}

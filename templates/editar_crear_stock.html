@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% if form.instance.id %}Editar{% else %}Crear{% endif %} Stock</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    
+    <div class="form-actions">
+        <button type="submit" class="btn guardar">💾 Guardar</button>
+        <a href="{% url 'stocks' %}" class="btn cancelar">✖ Cancelar</a>
+    </div>
+</form>
+{% endblock %}

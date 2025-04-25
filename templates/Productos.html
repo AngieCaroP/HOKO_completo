@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Productos - HOKO{% endblock %}
+
+
+
+{% block content %}
+
+<h1>Productos</h1>
+<div class="products-container">
+  <!-- Barra de acciones -->
+  <div class="products-actions">
+   <input type="text" placeholder="Buscar producto..." class="search-input" id="search-input">
+
+    <div class="action-buttons">
+      <button class="btn buscar" id="btn-buscar">🔍Buscar</button>
+      <a class="btn crear" href="{% url 'crear_producto' %}">➕Crear Producto</a>
+    </div>
+  </div>
+
+  <!-- Aquí va tu tabla -->
+  <div class="table-wrapper">
+    <table class="products-table" id="products-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Referencia</th>
+          <th>Imágenes</th>
+          <th>Costo</th>
+          <th>Precio</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for producto in productos %}
+        <tr>
+          <td><input type="checkbox" class="select-row" data-id="{{ producto.id }}"></td>
+          <td>{{ producto.id }}</td>
+          <td>{{ producto.nombre }}</td>
+          <td>{{ producto.referencia|default:"-" }}</td>
+          <td>
+            {% if producto.imagen %}
+              <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="img-thumb">
+            {% else %}
+              <img src="https://via.placeholder.com/40" alt="Producto" class="img-thumb">
+            {% endif %}
+          </td>
+          <td>${{ producto.costo|floatformat:2 }}</td>
+          <td>${{ producto.precio|floatformat:2 }}</td>
+          <td>
+            <a href="{% url 'ver_producto' producto.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_producto' producto.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_producto' producto.id %}" class="btn eliminar">🗑️</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %} 
