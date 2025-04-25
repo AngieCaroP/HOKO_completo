@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Listado de Bodegas{% endblock %}
+
+{% block content %}
+  <div class="content-container">
+    <h2 class="page-title">Listado de Bodegas</h2>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Dirección</th>
+          <th>Teléfono</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bodega in bodegas %}
+          <tr>
+            <td>{{ bodega.nombre }}</td>
+            <td>{{ bodega.direccion }}</td>
+            <td>{{ bodega.telefono }}</td>
+            <td>
+               
+                    <a href="{% url 'editar_bodega' id=bodega.id %}" class="btn editar">✏️</a>
+                    <a href="{% url 'eliminar_bodega' id=bodega.id %}" class="btn eliminar">🗑️</a>
+               
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+

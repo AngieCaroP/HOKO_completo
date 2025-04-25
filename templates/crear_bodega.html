@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Bodega - HOKO{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <h1>Crear Bodega</h1>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label for="{{ form.nombre.id_for_label }}">Nombre de la Bodega:</label>
+      {{ form.nombre }}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.direccion.id_for_label }}">Dirección:</label>
+      {{ form.direccion }}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.telefono.id_for_label }}">Teléfono:</label>
+      {{ form.telefono }}
+    </div>
+
+    <button type="submit" class="btn crear">Guardar</button>
+    <a href="{% url 'listar_bodegas' %}" class="btn btn-secondary">Cancelar</a>
+    <a href="{% url 'listar_bodegas' %}" class="btn crear">➕ Ver Bodegas</a>
+
+
+  </form>
+</div>
+
+{% endblock %}

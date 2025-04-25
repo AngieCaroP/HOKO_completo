@@ -1,13 +1,100 @@
 {% extends 'base.html' %}
 
+{% block title %}Confirmar Eliminación - HOKO{% endblock %}
+
 {% block content %}
-<h1>Eliminar Stock</h1>
+<div class="confirmation-container">
+  <h1>Confirmar Eliminación</h1>
+  
+  <div class="confirmation-card">
+    <div class="confirmation-message">
+      <p>¿Estás seguro que deseas eliminar este registro de stock?</p>
+      <div class="stock-details">
+        <p><strong>Producto:</strong> {{ stock.producto.nombre }}</p>
+        <p><strong>Bodega:</strong> 
+          {% if 'guayaquil' in stock.bodega.nombre|lower %}
+            GUAYAQUIL - Bodega Principal
+          {% elif 'quito' in stock.bodega.nombre|lower %}
+            QUITO - Bodega Norte
+          {% else %}
+            {{ stock.bodega.nombre }}
+          {% endif %}
+        </p>
+        <p><strong>Stock Actual:</strong> {{ stock.stock_actual }}</p>
+      </div>
+    </div>
 
-<p>¿Estás seguro que deseas marcar como eliminado el stock "{{ stock }}"?</p>
+    <div class="confirmation-actions">
+      <form method="post" class="delete-form">
+        {% csrf_token %}
+        <button type="submit" class="btn confirm-delete">🗑️ Sí, Eliminar</button>
+        <a href="{% url 'listar_stocks' %}" class="btn cancel-delete">✖ Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
 
-<form method="post">
-    {% csrf_token %}
-    <button type="submit" class="btn eliminar">🗑️ Sí, eliminar</button>
-    <a href="{% url 'stocks' %}" class="btn cancelar">✖ Cancelar</a>
-</form>
+<style>
+  .confirmation-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+  }
+  
+  .confirmation-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+    border-left: 4px solid #dc3545;
+  }
+  
+  .confirmation-message {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  
+  .stock-details {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+  }
+  
+  .confirmation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+  
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+  }
+  
+  .confirm-delete {
+    background: #dc3545;
+    color: white;
+  }
+  
+  .confirm-delete:hover {
+    background: #c82333;
+  }
+  
+  .cancel-delete {
+    background: #6c757d;
+    color: white;
+  }
+  
+  .cancel-delete:hover {
+    background: #5a6268;
+  }
+</style>
 {% endblock %}

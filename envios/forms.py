@@ -31,3 +31,9 @@ class StockForm(forms.ModelForm):
         self.fields['bodega'].queryset = Bodega.objects.filter(
             nombre__in=['GUAYAQUIL', 'QUITO']  # Filtra solo las bodegas específicas
         )
+
+#bodegas
+class BodegaForm(forms.ModelForm):
+    class Meta:
+        model = Bodega
+        fields = ['nombre', 'direccion', 'telefono']

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Bodega{% endblock %}
+
+{% block content %}
+  <h2>¿Estás segura de que deseas eliminar esta bodega?</h2>
+
+  <p><strong>Nombre:</strong> {{ bodega.nombre }}</p>
+  <p><strong>Dirección:</strong> {{ bodega.direccion }}</p>
+  <p><strong>Teléfono:</strong> {{ bodega.telefono }}</p>
+
+  <form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'listar_bodegas' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}

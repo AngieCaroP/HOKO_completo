@@ -4,7 +4,8 @@ from .models import Producto, Stock,  Bodega
 from .forms import ProductoForm, StockForm
 from django.contrib import messages
 from django.db.models import Q
-
+from django.shortcuts import render, redirect
+from .forms import BodegaForm
 
 
 #productos
@@ -94,18 +95,40 @@ def eliminar_stock(request, id):
         return redirect('listar_stocks')
     return render(request, 'eliminar_stock.html', {'stock': stock})
 
-#nose
+#bodegas
 
-def gestion_bodegas(request):
-    bodegas = Bodega.objects.all()
-    form = BodegaForm(request.POST or None)
-    
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('gestion_bodegas')
-    
-    return render(request, 'bodegas.html', {
-        'bodegas': bodegas,
-        'form': form
-    })
+# Vista para crear una nueva bodega
+def crear_bodega(request):
+    if request.method == 'POST':
+        form = BodegaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_bodegas')  # Redirige a la lista de bodegas después de guardar
+    else:
+        form = BodegaForm()  # Si no es POST, mostramos el formulario vacío
+    return render(request, 'crear_bodega.html', {'form': form})
 
+# Vista para listar todas las bodegas
+def listar_bodegas(request):
+    bodegas = Bodega.objects.all()  # Recupera todas las bodegas de la base de datos
+    return render(request, 'listar_bodegas.html', {'bodegas': bodegas})
+
+# Vista para editar una bodega existente
+def editar_bodega(request, id):
+    bodega = get_object_or_404(Bodega, id=id)
+    if request.method == 'POST':
+        form = BodegaForm(request.POST, instance=bodega)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_bodegas')
+    else:
+        form = BodegaForm(instance=bodega)
+    return render(request, 'editar_bodega.html', {'form': form})
+
+# Vista para eliminar una bodega
+def eliminar_bodega(request, id):
+    bodega = get_object_or_404(Bodega, id=id)
+    if request.method == 'POST':
+        bodega.delete()
+        return redirect('listar_bodegas')
+    return render(request, 'eliminar_bodega.html', {'bodega': bodega})

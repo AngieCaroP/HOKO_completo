@@ -1,3 +1,5 @@
+
+
 from django.db import models
 from decimal import Decimal
 
@@ -11,16 +13,15 @@ class Producto(models.Model):
     
     def __str__(self):
         return self.nombre
-
+# envios/models.py
 # Bodega Stock
 class Bodega(models.Model):
-    """Modelo que representa una bodega o almacén."""
     nombre = models.CharField(max_length=100)
-    ubicacion = models.CharField(max_length=100)
-    
+    direccion = models.CharField(max_length=200, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+
     def __str__(self):
-        """Representación en string de la bodega.""" 
-        return f"{self.nombre} - {self.ubicacion}"
+        return self.nombre
 
 # Stock
 class Stock(models.Model):
