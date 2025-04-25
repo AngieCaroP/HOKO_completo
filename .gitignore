@@ -1,0 +1,23 @@
+# Ignorar archivos y carpetas generados por el entorno virtual
+env/
+envs/
+
+# Ignorar archivos de base de datos
+db.sqlite3
+
+# Ignorar archivos de configuración de IDEs
+.vscode/
+
+# Ignorar archivos de logs
+*.log
+
+# Ignorar archivos de dependencias
+node_modules/
+
+# Ignorar otros archivos que no deberían ser rastreados
+*.pyc
+*.pyo
+*.db
+
+__pycache__/
+*.pyc
