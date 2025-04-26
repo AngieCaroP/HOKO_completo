@@ -13,7 +13,7 @@
     </div>
     <div class="form-group">
       <label for="{{ form.bodega.id_for_label }}">Bodega</label>
-      {{ form.bodega }}
+      {{ form.bodega }}  <!-- Esto mostrará el dropdown automáticamente -->
     </div>
     <div class="form-group">
       <label for="{{ form.stock_actual.id_for_label }}">Stock Actual</label>
@@ -23,6 +23,7 @@
       <label for="{{ form.umbral_minimo.id_for_label }}">Umbral Mínimo</label>
       {{ form.umbral_minimo }}
     </div>
+    
     <div class="form-actions">
       <button type="submit" class="btn guardar">💾 Guardar</button>
       <a href="{% url 'listar_stocks' %}" class="btn cancelar">✖ Cancelar</a>
@@ -30,6 +31,8 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
 
 <style>
   .form-container {
@@ -87,4 +90,3 @@
     background: #c82333;
   }
 </style>
-{% endblock %}

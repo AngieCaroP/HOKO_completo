@@ -28,10 +28,8 @@ class StockForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['bodega'].queryset = Bodega.objects.filter(
-            nombre__in=['GUAYAQUIL', 'QUITO']  # Filtra solo las bodegas específicas
-        )
-
+        # Asegúrate que el queryset de bodegas esté ordenado
+        self.fields['bodega'].queryset = Bodega.objects.all().order_by('nombre')
 #bodegas
 class BodegaForm(forms.ModelForm):
     class Meta:
