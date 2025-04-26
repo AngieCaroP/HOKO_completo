@@ -35,7 +35,11 @@
                     <i class="fas fa-warehouse"></i> Stock
                 </a>
             </li>
-         
+            <li class="menu-item {% if request.resolver_match.url_name == 'listar_stocks' %}active{% endif %}">
+              <a href="{% url 'listar_bodegas' %}">
+                  <i class="fas fa-warehouse"></i> Bodegas
+              </a>
+          </li>
         </ul>
     </nav>
     </div>

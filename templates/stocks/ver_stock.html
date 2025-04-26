@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Stocks - HOKO{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+  <h1>Stock de {{ stock.producto.nombre }}</h1>
+  
+  <div class="detail-wrapper">
+    <p><strong>Producto:</strong> {{ stock.producto.nombre }}</p>
+    <p><strong>Bodega:</strong> {{ stock.bodega.nombre }}</p>
+    <p><strong>Cantidad:</strong> {{ stock.cantidad }}</p>
+    <p><strong>Fecha de creación:</strong> {{ stock.fecha_creacion }}</p>
+  </div>
+  
+  <a href="{% url 'listar_stocks' %}" class="btn volver">Volver</a>
+</div>
+{% endblock %}

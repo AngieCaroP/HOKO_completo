@@ -41,6 +41,7 @@
     <table class="products-table" id="stocks-table">
       <thead>
         <tr>
+          <th><input type="checkbox" id="select-all"></th>
           <th>ID</th>
           <th>Producto</th>
           <th>Bodega</th>
@@ -52,11 +53,13 @@
       </thead>
       <tbody>
         {% for stock in stocks %}
+        
         <tr data-id="{{ stock.id }}" 
             data-producto="{{ stock.producto.nombre|lower }}" 
             data-bodega="{% if 'guayaquil' in stock.bodega.nombre|lower %}guayaquil{% elif 'quito' in stock.bodega.nombre|lower %}quito{% else %}{{ stock.bodega.id }}{% endif %}"
             data-status="{% if stock.stock_actual <= 0 %}sin{% elif stock.stock_actual < stock.umbral_minimo %}bajo{% else %}ok{% endif %}">
-          <td>{{ stock.id }}</td>
+            <td><input type="checkbox" class="select-row" data-id="{{ stock.id }}"></td>
+            <td>{{ stock.id }}</td>
           <td>{{ stock.producto.nombre }}</td>
           <td>
             {% if 'guayaquil' in stock.bodega.nombre|lower %}
@@ -78,13 +81,13 @@
               <span class="status-badge ok-stock">OK</span>
             {% endif %}
           </td>
-          <td class="actions">
-            <a href="{% url 'editar_stock' stock.id %}" class="btn-action edit-btn" title="Editar">✏️</a>
-            <form action="{% url 'eliminar_stock' stock.id %}" method="post" class="delete-form">
-              {% csrf_token %}
-              <button type="submit" class="btn-action delete-btn" title="Eliminar" onclick="return confirm('¿Estás seguro?')">🗑️</button>
-            </form>
+
+          <td>
+            <a href="{% url 'ver_stock' stock.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_stock' stock.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_stock' stock.id %}" class="btn eliminar">🗑️</a>
           </td>
+
         </tr>
         {% endfor %}
       </tbody>

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Bodega - HOKO{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+  <h1>{{ bodega.nombre }}</h1>
+  
+  <div class="detail-wrapper">
+    <p><strong>Nombre:</strong> {{ bodega.nombre }}</p>
+    <p><strong>Ubicación:</strong> {{ bodega.ubicacion }}</p>
+    <p><strong>Capacidad:</strong> {{ bodega.capacidad }}</p>
+  </div>
+  
+  <a href="{% url 'listar_bodegas' %}" class="btn volver">Volver</a>
+</div>
+{% endblock %}

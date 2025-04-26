@@ -1,4 +1,4 @@
-
+# envios/models.py
 
 from django.db import models
 from decimal import Decimal
@@ -13,7 +13,7 @@ class Producto(models.Model):
     
     def __str__(self):
         return self.nombre
-# envios/models.py
+
 # Bodega Stock
 class Bodega(models.Model):
     nombre = models.CharField(max_length=100)

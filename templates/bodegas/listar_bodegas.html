@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Listado de Bodegas{% endblock %}
+
+{% block content %}
+<div class="content-container">
+  <h2 class="page-title">Listado de Bodegas</h2>
+
+  <!-- Barra de acciones -->
+  <div class="products-actions">
+    <input type="text" id="search-input" placeholder="Buscar bodega..." class="search-input">
+    
+    <div class="action-buttons">
+      <a href="{% url 'crear_bodega' %}" class="btn crear">➕ Nueva Bodega</a>
+    </div>
+  </div>
+
+  <!-- Tabla de bodegas -->
+  <div class="table-wrapper">
+    <table class="products-table" id="bodegas-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th>Nombre</th>
+          <th>Dirección</th>
+          <th>Teléfono</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bodega in bodegas %}
+       
+        <tr> 
+          <td><input type="checkbox" class="select-row" data-id="{{ bodega.id }}"></td>
+          <td>{{ bodega.nombre }}</td>
+          <td>{{ bodega.direccion }}</td>
+          <td>{{ bodega.telefono }}</td>
+
+          <td>
+            <a href="{% url 'ver_bodega' id=bodega.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_bodega' id=bodega.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_bodega' id=bodega.id %}" class="btn eliminar">🗑️</a>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

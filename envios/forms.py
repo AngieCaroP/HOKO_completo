@@ -30,6 +30,7 @@ class StockForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Asegúrate que el queryset de bodegas esté ordenado
         self.fields['bodega'].queryset = Bodega.objects.all().order_by('nombre')
+        
 #bodegas
 class BodegaForm(forms.ModelForm):
     class Meta:
