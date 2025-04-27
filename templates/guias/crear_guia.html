@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+  {% csrf_token %}
+  
+  <!-- Columna Izquierda: Información Personal -->
+  <div class="personal-section">
+    <div class="form-group">
+      <label for="{{ form.cliente_nombre.id_for_label }}">Nombre completo *</label>
+      {{ form.cliente_nombre }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_telefono.id_for_label }}">Teléfono *</label>
+      {{ form.cliente_telefono }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_ciudad.id_for_label }}">Ciudad *</label>
+
+      <select name="ciudad" required>
+        <option value="Quito" {% if form_data.ciudad == 'Seleccion' %}selected{% endif %}>Seleccione Ciudad</option>
+        <option value="Guayaquil" {% if form_data.ciudad == 'Guayaquil' %}selected{% endif %}>Guayaquil</option>
+        <option value="Quito" {% if form_data.ciudad == 'Quito' %}selected{% endif %}>Quito</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
+      {{ form.cliente_direccion }}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.cliente_direccion_secundaria.id_for_label }}">Dirección Secundaria *</label>
+      {{ form.cliente_direccion2}}
+    </div>
+    <!-- Si tienes un campo de dirección secundaria, agrégalo en el forms.py -->
+  </div>
+
+  <!-- Línea separadora entre columnas -->
+  <div class="separador"></div>
+  <div class="linea-horizontal"></div>
+
+  
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+      <div class="form-group">
+        <label for="{{ form.producto.id_for_label }}"><strong>Selecciona un producto</strong></label>
+        {{ form.producto }}
+      </div>
+ 
+      <div id="contenedor-productos" style="display: none;">
+        <table class="tabla-rosada">
+          <thead>
+            <tr>
+              <th>Imagen</th>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Cantidad</th>
+              <th>Total</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-tabla">
+            <!-- Productos dinámicos -->
+          </tbody>
+        </table>
+      </div>
+
+    <div class="linea-horizontal"></div>
+
+    <div class="orden-columna">
+      <label for="{{ form.contenido.id_for_label }}"><strong>Contenido de la orden (máx 39 letras)</strong></label>
+      {{ form.contenido }}
+    </div>
+    <div class="orden-columna">
+      <label for="{{ form.cantidad.id_for_label }}"><strong>Cantidad de la orden</strong></label>
+      {{ form.cantidad }}
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Crear Guía</button>
+</form>
+
+{% endblock %}

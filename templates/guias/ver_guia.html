@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Guía #{{ guia.id }} - HOKO{% endblock %}
+
+{% block content %}
+<div class="guia-container">
+  <h1>Guía de Envío #{{ guia.id }}</h1>
+  
+  <div class="guia-header">
+    <span class="estado {{ guia.estado }}">{{ guia.get_estado_display }}</span>
+    <span class="fecha">Creada: {{ guia.fecha_creacion|date:"d/m/Y H:i" }}</span>
+  </div>
+  
+  <div class="guia-section">
+    <h2>Datos del Cliente</h2>
+    <div class="guia-row">
+      <span class="label">Nombre:</span>
+      <span class="value">{{ guia.nombre }}</span>
+    </div>
+    <div class="guia-row">
+      <span class="label">Teléfono:</span>
+      <span class="value">{{ guia.telefono }}</span>
+    </div>
+    <div class="guia-row">
+      <span class="label">Ciudad:</span>
+      <span class="value">{{ guia.ciudad }}</span>
+    </div>
+    <div class="guia-row">
+      <span class="label">Dirección:</span>
+      <span class="value">{{ guia.direccion }}</span>
+    </div>
+    {% if guia.direccion_secundaria %}
+    <div class="guia-row">
+      <span class="label">Dirección Secundaria:</span>
+      <span class="value">{{ guia.direccion_secundaria }}</span>
+    </div>
+    {% endif %}
+  </div>
+  
+  <div class="guia-section">
+    <h2>Detalles del Envío</h2>
+    <div class="guia-row">
+      <span class="label">Producto:</span>
+      <span class="value">{{ guia.producto.nombre }}</span>
+    </div>
+    <div class="guia-row">
+      <span class="label">Cantidad:</span>
+      <span class="value">{{ guia.cantidad }}</span>
+    </div>
+    {% if guia.contenido %}
+    <div class="guia-row">
+      <span class="label">Contenido:</span>
+      <span class="value">{{ guia.contenido }}</span>
+    </div>
+    {% endif %}
+    {% if guia.observaciones %}
+    <div class="guia-row">
+      <span class="label">Observaciones:</span>
+      <span class="value">{{ guia.observaciones }}</span>
+    </div>
+    {% endif %}
+  </div>
+  
+  <div class="guia-actions">
+    <a href="{% url 'listar_guias' %}" class="btn-volver">Volver a la lista</a>
+    <a href="#" class="btn-imprimir">Imprimir Guía</a>
+  </div>
+</div>
+
+
+{% endblock %}

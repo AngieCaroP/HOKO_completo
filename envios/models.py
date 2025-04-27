@@ -54,3 +54,48 @@ class Stock(models.Model):
     def __str__(self):
         """Representación en string del registro de stock."""
         return f"{self.producto} - {self.bodega}"
+
+#guias
+class GuiaEnvio(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('preparacion', 'En preparación'),
+        ('transito', 'En tránsito'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    # Datos del cliente
+    cliente_nombre = models.CharField(max_length=100)
+    cliente_telefono = models.CharField(max_length=20)
+    cliente_ciudad = models.CharField(max_length=50)
+    cliente_direccion = models.TextField()
+    cliente_direccion2 = models.TextField(blank=True, null=True)
+    
+    # Relación con productos
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='guias')
+    cantidad = models.PositiveIntegerField(default=1)
+    contenido = models.CharField(max_length=100, blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)
+    
+    # Datos de seguimiento
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    codigo_seguimiento = models.CharField(max_length=20, unique=True, blank=True)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = 'Guía de Envío'
+        verbose_name_plural = 'Guías de Envío'
+    
+    def __str__(self):
+        return f"Guía #{self.id} - {self.cliente_nombre}"
+    
+    def save(self, *args, **kwargs):
+        if not self.codigo_seguimiento:
+            self.codigo_seguimiento = f"HOKO-{self.id:05d}"
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('ver_guia', args=[str(self.id)])

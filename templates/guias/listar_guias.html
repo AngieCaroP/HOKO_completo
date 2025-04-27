@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Listado de Guías - HOKO{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Guías de Envío</h1>
+
+
+    <!-- Barra de acciones -->
+    <div class="products-actions">
+        <input type="text" placeholder="Buscar producto..." class="search-input" id="search-input">
+
+        <div class="action-buttons">
+            <button class="btn buscar" id="btn-buscar">🔍Buscar</button>
+            <a class="btn crear" href="{% url 'crear_guia' %}">➕Crear Guia</a>
+        </div>
+    </div>
+
+    <!-- Aquí va tu tabla -->
+    <div class="table-wrapper">
+        <table class="products-table" id="products-table">
+            <thead>
+
+
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Cliente</th>
+                    <th>Producto</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guia in guias %}
+                <tr>
+                    <td><input type="checkbox" class="select-row" data-id="{{ producto.id }}"></td>
+                    <td>{{ guia.id }}</td>
+                    <td>{{ guia.codigo_seguimiento }}</td>
+                    <td>{{ guia.cliente_nombre }}</td>
+                    <td>{{ guia.producto.nombre }}</td>
+                    <td>
+                        <span class="badge 
+                                    {% if guia.estado == 'entregado' %}bg-success
+                                    {% elif guia.estado == 'cancelado' %}bg-danger
+                                    {% else %}bg-warning text-dark{% endif %}">
+                            {{ guia.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>{{ guia.fecha_creacion|date:"d/m/Y" }}</td>
+
+                    <td>
+                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
+                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
+                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center">No hay guías registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function () {
+        $('#dataTable').DataTable({
+            order: [[0, 'desc']],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+            }
+        });
+    });
+</script>
+{% endblock %}

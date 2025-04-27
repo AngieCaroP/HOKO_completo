@@ -1,7 +1,8 @@
 # envios/urls.py
 from django.urls import path
 from . import views
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 from django.urls import path
 from . import views
@@ -27,5 +28,15 @@ urlpatterns = [
     path('bodegas/<int:id>/', views.ver_bodega, name='ver_bodega'),  # Nueva ruta
     path('bodegas/editar/<int:id>/', views.editar_bodega, name='editar_bodega'),
     path('bodegas/eliminar/<int:id>/', views.eliminar_bodega, name='eliminar_bodega'),
-]
+
+      # Guías
+    path('guias/', views.listar_guias, name='listar_guias'),
+    path('guias/crear/', views.crear_guia, name='crear_guia'),
+    path('guias/<int:id>/', views.ver_bodega, name='ver_guia'),  # Nueva ruta
+    path('guias/editar/<int:id>/', views.editar_bodega, name='editar_guia'),
+    path('guias/eliminar/<int:id>/', views.eliminar_bodega, name='eliminar_guia'),
+    
+    # API
+    path('api/productos/<int:pk>/', views.producto_api_detail, name='producto_api_detail'),
+]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

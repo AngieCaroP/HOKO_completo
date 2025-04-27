@@ -1,11 +1,13 @@
 # envios/views.py
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Producto, Stock,  Bodega
-from .forms import ProductoForm, StockForm
 from django.contrib import messages
 from django.db.models import Q
-from django.shortcuts import render, redirect
-from .forms import BodegaForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from .models import Producto, Stock, Bodega, GuiaEnvio
+from .forms import ProductoForm, StockForm, BodegaForm, GuiaEnvioForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 
 # ===== PRODUCTOS =====
 def listar_productos(request):
@@ -161,3 +163,73 @@ def eliminar_bodega(request, id):
 def ver_bodega(request, id):
     bodega = get_object_or_404(Bodega, id=id)
     return render(request, 'bodegas/ver_bodega.html', {'bodega': bodega})
+
+#=======guias========
+from django.db.models import Q
+
+from django.db.models import Q
+
+def crear_guia(request):
+    productos = Producto.objects.all()
+    query = request.GET.get('q')
+    
+    if query:
+        productos = productos.filter(
+            Q(nombre__icontains=query) | 
+            Q(referencia__icontains=query)
+        )
+    
+    if request.method == 'POST':
+        form = GuiaEnvioForm(request.POST)
+        if form.is_valid():
+            guia = form.save()
+            messages.success(request, f'Guía #{guia.id} creada exitosamente! Código: {guia.codigo_seguimiento}')
+            return redirect('ver_guia', id=guia.id)
+        else:
+            messages.error(request, 'Por favor corrige los errores en el formulario.')
+    else:
+        form = GuiaEnvioForm()
+    
+    return render(request, 'guias/crear_guia.html', {
+        'form': form,
+        'productos': productos,
+        'query': query or ''
+    })
+
+def ver_guia(request, id):
+    guia = get_object_or_404(GuiaEnvio, id=id)
+    return render(request, 'guias/ver_guia.html', {'guia': guia})
+
+def listar_guias(request):
+    guias = GuiaEnvio.objects.select_related('producto').all()
+    
+    # Filtros
+    estado = request.GET.get('estado')
+    if estado:
+        guias = guias.filter(estado=estado)
+    
+    search = request.GET.get('search')
+    if search:
+        guias = guias.filter(
+            Q(cliente_nombre__icontains=search) |
+            Q(codigo_seguimiento__icontains=search) |
+            Q(producto__nombre__icontains=search)
+        )
+    
+    return render(request, 'guias/listar_guias.html', {
+        'guias': guias,
+        'estados': GuiaEnvio.ESTADO_CHOICES
+    })
+
+
+@require_GET
+def producto_api_detail(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    data = {
+        'id': producto.id,
+        'nombre': producto.nombre,
+        'referencia': producto.referencia if hasattr(producto, 'referencia') else '',
+        'precio': str(producto.precio),
+        'imagen': producto.imagen.url if producto.imagen else None,
+    }
+    return JsonResponse(data)

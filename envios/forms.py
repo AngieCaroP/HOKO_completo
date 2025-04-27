@@ -1,5 +1,5 @@
 from django import forms
-from .models import  Producto, Stock, Bodega  # Asegúrate de importar Bodega de models.py
+from .models import  Producto, Stock, Bodega, GuiaEnvio  # Asegúrate de importar Bodega de models.py
 
 #producto
 class ProductoForm(forms.ModelForm):
@@ -36,3 +36,55 @@ class BodegaForm(forms.ModelForm):
     class Meta:
         model = Bodega
         fields = ['nombre', 'direccion', 'telefono']
+
+#guias
+
+class GuiaEnvioForm(forms.ModelForm):
+    producto = forms.ModelChoiceField(
+        queryset=Producto.objects.all(),
+        widget=forms.Select(attrs={
+            'class': 'form-control select-producto',
+            'id': 'producto-select'
+        }),
+        label="Producto"
+    )
+    
+    class Meta:
+        model = GuiaEnvio
+        fields = '__all__'
+        widgets = {
+            'cliente_nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre completo'
+            }),
+            'cliente_telefono': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 0991234567'
+            }),
+            'cliente_ciudad': forms.Select(attrs={
+                'class': 'form-control select-ciudad'
+            }),
+            'cliente_direccion': forms.TextInput(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Dirección principal'
+            }),
+              'cliente_direccion2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Dirección secundaria'
+            }),
+            'contenido': forms.TextInput(attrs={
+                'class': 'form-control',
+                'maxlength': '39'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Instrucciones especiales'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['producto'].queryset = Producto.objects.order_by('nombre')
