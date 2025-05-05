@@ -39,52 +39,67 @@ class BodegaForm(forms.ModelForm):
 
 #guias
 
+# envios/forms.py (actualización)
+
 class GuiaEnvioForm(forms.ModelForm):
-    producto = forms.ModelChoiceField(
-        queryset=Producto.objects.all(),
-        widget=forms.Select(attrs={
-            'class': 'form-control select-producto',
-            'id': 'producto-select'
-        }),
-        label="Producto"
-    )
-    
     class Meta:
         model = GuiaEnvio
         fields = '__all__'
         widgets = {
             'cliente_nombre': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Nombre completo'
+                'required': 'required'
             }),
             'cliente_telefono': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ej: 0991234567'
+                'required': 'required'
             }),
             'cliente_ciudad': forms.Select(attrs={
-                'class': 'form-control select-ciudad'
+                'class': 'form-control',
+                'required': 'required'
             }),
             'cliente_direccion': forms.TextInput(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Dirección principal'
+                'required': 'required'
             }),
-              'cliente_direccion2': forms.TextInput(attrs={
+             'cliente_direccion2': forms.TextInput(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Dirección secundaria'
+                'required': 'required'
             }),
-            'contenido': forms.TextInput(attrs={
+            'producto': forms.Select(attrs={
                 'class': 'form-control',
-                'maxlength': '39'
+                'required': 'required'
             }),
-            'observaciones': forms.Textarea(attrs={
+            'cantidad': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Instrucciones especiales'
+                'required': 'required',
+                'min': 1
             }),
         }
-    
+        model = GuiaEnvio
+        fields = '__all__'
+        widgets = {
+            'cliente_ciudad': forms.Select(attrs={
+                'class': 'form-control',
+                'required': 'required'
+            }),
+        }
+
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Establecer valor por defecto para estado
+        self.fields['estado'].initial = 'pendiente'
+        # Ordenar productos por nombre
         self.fields['producto'].queryset = Producto.objects.order_by('nombre')
+        # Configurar campos requeridos
+        self.fields['cliente_nombre'].required = True
+        self.fields['cliente_telefono'].required = True
+        self.fields['cliente_ciudad'].required = True
+        self.fields['cliente_direccion'].required = True
+        self.fields['producto'].required = True
+        self.fields['cantidad'].required = True
+        # Ordenar las ciudades alfabéticamente
+        self.fields['cliente_ciudad'].choices = sorted(GuiaEnvio.CIUDAD_CHOICES, key=lambda x: x[1])

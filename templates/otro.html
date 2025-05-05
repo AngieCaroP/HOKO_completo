@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+  {% csrf_token %}
+
+  <!-- Columna Izquierda: Información Personal -->
+  <div class="personal-section">
+    <div class="form-group">
+      <label for="{{ form.cliente_nombre.id_for_label }}">Nombre completo *</label>
+      {{ form.cliente_nombre }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_telefono.id_for_label }}">Teléfono *</label>
+      {{ form.cliente_telefono }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_ciudad.id_for_label }}">Ciudad *</label>
+
+      <select name="ciudad" required>
+        <option value="Quito" {% if form_data.ciudad=='Seleccion' %}selected{% endif %}>Seleccione Ciudad</option>
+        <option value="Guayaquil" {% if form_data.ciudad=='Guayaquil' %}selected{% endif %}>Guayaquil</option>
+        <option value="Quito" {% if form_data.ciudad=='Quito' %}selected{% endif %}>Quito</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
+      {{ form.cliente_direccion }}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.cliente_direccion_secundaria.id_for_label }}">Dirección Secundaria *</label>
+      {{ form.cliente_direccion2}}
+    </div>
+    <!-- Si tienes un campo de dirección secundaria, agrégalo en el forms.py -->
+  </div>
+
+  <!-- Línea separadora entre columnas -->
+  <div class="separador"></div>
+  <div class="linea-horizontal"></div>
+
+
+  <!-- Columna Derecha: Selección de Producto y Orden -->
+  <div class="right-section">
+    <div class="form-group">
+      <label for="{{ form.producto.id_for_label }}"><strong>Selecciona un producto</strong></label>
+      {{ form.producto }}
+    </div>
+
+    <div id="contenedor-productos" style="display: none;">
+      <table class="tabla-rosada">
+        <thead>
+          <tr>
+            <th>Imagen</th>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            <th>Total</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-tabla">
+          <!-- Productos dinámicos -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="linea-horizontal"></div>
+
+    <div class="orden-columna">
+      <label for="{{ form.contenido.id_for_label }}"><strong>Contenido de la orden (máx 39 letras)</strong></label>
+      {{ form.contenido }}
+    </div>
+    <div class="orden-columna">
+      <label for="{{ form.cantidad.id_for_label }}"><strong>Cantidad de la orden</strong></label>
+      {{ form.cantidad }}
+    </div>
+  </div>
+
+  <!-- Botones -->
+  <div class="form-actions text-right mt-4">
+    <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+      <i class="fas fa-save"></i> Guardar y Volver
+    </button>
+    <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+      <i class="fas fa-times"></i> Cancelar
+    </a>
+  </div>
+</form>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+<!-- LISTAR GUIAS -->
+
+{% extends 'base.html' %}
+
+{% block title %}Guías de Envío - HOKO{% endblock %}
+
+{% block content %}
+<div class="products-container">
+  <h1>Guías de Envío</h1>
+
+  <!-- Barra de acciones -->
+  <div class="products-actions">
+    <form method="get" id="search-form">
+      <input type="text" name="search" id="search-input" placeholder="Buscar por ID, código, cliente, producto..."
+        class="search-input" value="{{ request.GET.search }}">
+
+      <div class="action-buttons">
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+          <i class="fas fa-sync-alt"></i> Limpiar
+        </a>
+        <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
+
+        <!-- Filtros -->
+        <div class="filters">
+          <select name="estado" id="filter-status" class="filter-select">
+            <option value="">Todos los estados</option>
+            {% for value, label in estados %}
+            <option value="{{ value }}" {% if request.GET.estado==value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+
+          <select name="ciudad" id="filter-ciudad" class="filter-select">
+            <option value="">Todas las ciudades</option>
+            {% for ciudad in ciudades %}
+            <option value="{{ ciudad.0 }}" {% if request.GET.ciudad==ciudad.0 %}selected{% endif %}>{{ ciudad.1 }}
+            </option>
+            {% endfor %}
+          </select>
+
+          <!-- Filtro de fechas -->
+          <div class="date-filter">
+            <label>Desde:</label>
+            <input type="date" name="fecha_inicio" id="filter-fecha-inicio" class="filter-date"
+              value="{{ request.GET.fecha_inicio }}">
+
+            <label>Hasta:</label>
+            <input type="date" name="fecha_fin" id="filter-fecha-fin" class="filter-date"
+              value="{{ request.GET.fecha_fin }}">
+
+            <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de guías -->
+  <div class="table-wrapper">
+    <table class="products-table" id="guias-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th>ID</th>
+          <th>Código</th>
+          <th>Cliente</th>
+          <th>Ciudad</th>
+          <th>Producto</th>
+          <th>Estado</th>
+          <th>Creación</th>
+          <th>Modificación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for guia in guias %}
+        <tr>
+          <td><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
+          <td>{{ guia.id }}</td>
+          <td>{{ guia.codigo_seguimiento }}</td>
+          <td>{{ guia.cliente_nombre }}</td>
+          <td>{{ guia.cliente_ciudad }}</td>
+          <td>{{ guia.producto.nombre }}</td>
+          <td>
+            <span class="badge 
+                              {% if guia.estado == 'entregado' %}badge-success
+                              {% elif guia.estado == 'cancelado' %}badge-danger
+                              {% else %}badge-warning{% endif %}">
+              {{ guia.get_estado_display }}
+            </span>
+          </td>
+          <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+          <td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+          <td>
+            <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="text-center">No hay guías registradas</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Búsqueda con submit del formulario
+    const searchForm = document.getElementById('search-form');
+
+    // Aplicar filtros al cambiar cualquier campo
+    const filterInputs = document.querySelectorAll('#search-form input, #search-form select');
+    filterInputs.forEach(input => {
+      input.addEventListener('change', function () {
+        searchForm.submit();
+      });
+    });
+
+    // Manejar búsqueda por Enter
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        searchForm.submit();
+      }
+    });
+  });
+</script>
+{% endblock %}
+
+
+
+
+<!-- LISTAR GUIAS CON FILTROS-->
+
+{% extends 'base.html' %}
+
+{% block title %}Guías de Envío - HOKO{% endblock %}
+
+{% block content %}
+<div class="products-container">
+  <h1>Guías de Envío</h1>
+
+  <!-- Barra de acciones -->
+  <div class="products-actions">
+    <form method="get" id="search-form">
+      <input type="text" name="search" id="search-input" placeholder="Buscar por ID, código, cliente, producto..."
+        class="search-input" value="{{ request.GET.search }}">
+
+      <div class="action-buttons">
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+          <i class="fas fa-sync-alt"></i> Limpiar
+        </a>
+        <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
+
+        <!-- Contenedor del Popover de Filtros -->
+        <div class="popover-container">
+          <button type="button" class="popover-toggle" aria-label="Filtrar productos" id="togglePopover">🛠️
+            Filtros</button>
+
+          <div class="popover hidden" id="filterPopover" role="dialog" aria-labelledby="filterPopoverLabel"
+            aria-hidden="true">
+            <h4 id="filterPopoverLabel" class="sr-only">Filtros de búsqueda</h4>
+
+            <div class="popover-content">
+              <form method="get" id="filters-form">
+                <h4>ESTADO</h4>
+                <select name="estado" id="filter-status" class="filter-select" aria-label="Filtrar por estado">
+                  <option value="">Todos los estados</option>
+                  {% for value, label in estados %}
+                  <option value="{{ value }}" {% if request.GET.estado|default:''==value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                  {% endfor %}
+                </select>
+
+                <h4>CIUDAD</h4>
+                <select name="ciudad" id="filter-ciudad" class="filter-select" aria-label="Filtrar por ciudad">
+                  <option value="">Todas las ciudades</option>
+                  {% for ciudad in ciudades %}
+                  <option value="{{ ciudad.0 }}" {% if request.GET.ciudad|default:''==ciudad.0 %}selected{% endif %}>
+                    {{ ciudad.1 }}
+                  </option>
+                  {% endfor %}
+                </select>
+
+                <h4>FECHA</h4>
+                <div class="date-filter">
+                  <label for="filter-fecha-inicio">Desde:</label>
+                  <input type="date" name="fecha_inicio" id="filter-fecha-inicio" class="filter-date"
+                    value="{{ request.GET.fecha_inicio }}">
+
+                  <label for="filter-fecha-fin">Hasta:</label>
+                  <input type="date" name="fecha_fin" id="filter-fecha-fin" class="filter-date"
+                    value="{{ request.GET.fecha_fin }}">
+                </div>
+
+                <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de guías -->
+  <div class="table-wrapper">
+    <table class="products-table" id="guias-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th>ID</th>
+          <th>Código</th>
+          <th>Cliente</th>
+          <th>Ciudad</th>
+          <th>Producto</th>
+          <th>Estado</th>
+          <th>Creación</th>
+          <th>Modificación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for guia in guias %}
+        <tr data-id="{{ guia.id }}" data-codigo="{{ guia.codigo_seguimiento|lower }}"
+          data-cliente="{{ guia.cliente_nombre|lower }}" data-producto="{{ guia.producto.nombre|lower }}"
+          data-ciudad="{{ guia.cliente_ciudad|lower }}" data-estado="{{ guia.estado }}">
+          <td><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
+          <td>{{ guia.id }}</td>
+          <td>{{ guia.codigo_seguimiento }}</td>
+          <td>{{ guia.cliente_nombre }}</td>
+          <td>{{ guia.cliente_ciudad }}</td>
+          <td>{{ guia.producto.nombre }}</td>
+          <td>
+            <span class="badge 
+                            {% if guia.estado == 'entregado' %}badge-success
+                            {% elif guia.estado == 'cancelado' %}badge-danger
+                            {% else %}badge-warning{% endif %}">
+              {{ guia.get_estado_display }}
+            </span>
+          </td>
+          <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+          <td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+          <td>
+            <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="text-center">No hay guías registradas</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .hidden {
+    display: none;
+  }
+</style>
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchForm = document.getElementById('search-form');
+
+    const filterInputs = document.querySelectorAll('#search-form input, #search-form select');
+    filterInputs.forEach(input => {
+      input.addEventListener('change', function () {
+        searchForm.submit();
+      });
+    });
+
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        searchForm.submit();
+      }
+    });
+
+    const toggle = document.getElementById('togglePopover');
+    const popover = document.getElementById('filterPopover');
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      popover.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!popover.contains(e.target) && !toggle.contains(e.target)) {
+        popover.classList.add('hidden');
+      }
+    });
+  });
+</script>
+{% endblock %}

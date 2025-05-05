@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Guía #{{ guia.id }} - HOKO{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Confirmar eliminación</h1>
+    
+    <div class="alert alert-warning">
+        <p>¿Estás seguro que deseas eliminar la guía #{{ guia.id }}?</p>
+        <p><strong>Código:</strong> {{ guia.codigo_seguimiento }}</p>
+        <p><strong>Cliente:</strong> {{ guia.cliente_nombre }}</p>
+        <p><strong>Producto:</strong> {{ guia.producto.nombre }}</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Confirmar eliminación</button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

@@ -32,9 +32,9 @@ urlpatterns = [
       # Guías
     path('guias/', views.listar_guias, name='listar_guias'),
     path('guias/crear/', views.crear_guia, name='crear_guia'),
-    path('guias/<int:id>/', views.ver_bodega, name='ver_guia'),  # Nueva ruta
-    path('guias/editar/<int:id>/', views.editar_bodega, name='editar_guia'),
-    path('guias/eliminar/<int:id>/', views.eliminar_bodega, name='eliminar_guia'),
+  path('guias/<int:id>/', views.ver_guia, name='ver_guia'),  # Corregido
+    path('guias/<int:id>/editar/', views.editar_guia, name='editar_guia'),  # Corregido
+    path('guias/<int:id>/eliminar/', views.eliminar_guia, name='eliminar_guia'),  # Corregido
     
     # API
     path('api/productos/<int:pk>/', views.producto_api_detail, name='producto_api_detail'),

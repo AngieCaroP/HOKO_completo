@@ -2,23 +2,33 @@
 
 {% block title %}Productos - HOKO{% endblock %}
 
-
-
 {% block content %}
-
-<h1>Productos</h1>
 <div class="products-container">
+  <h1>Productos</h1>
+  
   <!-- Barra de acciones -->
   <div class="products-actions">
-   <input type="text" placeholder="Buscar producto..." class="search-input" id="search-input">
-
+    <input type="text" id="search-input" placeholder="Buscar por ID, nombre, referencia..." class="search-input">
+    
     <div class="action-buttons">
-      <button class="btn buscar" id="btn-buscar">🔍Buscar</button>
-      <a class="btn crear" href="{% url 'crear_producto' %}">➕Crear Producto</a>
+      <a href="{% url 'listar_productos' %}" class="btn btn-secondary">
+        <i class="fas fa-sync-alt"></i> Limpiar
+    </a>
+      <a href="{% url 'crear_producto' %}" class="btn crear">➕ Nuevo Producto</a>
+      
+      <!-- Filtros -->
+      <div class="filters">
+        <select id="filter-precio" class="filter-select">
+          <option value="">Todos los precios</option>
+          <option value="0-50">$0 - $50</option>
+          <option value="50-100">$50 - $100</option>
+          <option value="100+">Más de $100</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  <!-- Aquí va tu tabla -->
+  <!-- Tabla de productos -->
   <div class="table-wrapper">
     <table class="products-table" id="products-table">
       <thead>
@@ -27,7 +37,7 @@
           <th>ID</th>
           <th>Nombre</th>
           <th>Referencia</th>
-          <th>Imágenes</th>
+          <th>Imagen</th>
           <th>Costo</th>
           <th>Precio</th>
           <th>Acciones</th>
@@ -35,7 +45,10 @@
       </thead>
       <tbody>
         {% for producto in productos %}
-        <tr>
+        <tr data-id="{{ producto.id }}"
+            data-nombre="{{ producto.nombre|lower }}"
+            data-referencia="{{ producto.referencia|default:''|lower }}"
+            data-precio="{{ producto.precio }}">
           <td><input type="checkbox" class="select-row" data-id="{{ producto.id }}"></td>
           <td>{{ producto.id }}</td>
           <td>{{ producto.nombre }}</td>
@@ -44,7 +57,7 @@
             {% if producto.imagen %}
               <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="img-thumb">
             {% else %}
-              <img src="https://via.placeholder.com/40" alt="Producto" class="img-thumb">
+              <img src="https://via.placeholder.com/40" alt="Sin imagen" class="img-thumb">
             {% endif %}
           </td>
           <td>${{ producto.costo|floatformat:2 }}</td>
@@ -59,4 +72,51 @@
       </tbody>
     </table>
   </div>
-{% endblock %} 
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Búsqueda instantánea
+  const searchInput = document.getElementById('search-input');
+  const tableRows = document.querySelectorAll('#products-table tbody tr');
+  
+  searchInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    tableRows.forEach(row => {
+      const rowText = row.textContent.toLowerCase();
+      const rowId = row.dataset.id;
+      const rowNombre = row.dataset.nombre;
+      const rowReferencia = row.dataset.referencia;
+      
+      const match = rowText.includes(term) || 
+                   rowId.includes(term) || 
+                   rowNombre.includes(term) || 
+                   rowReferencia.includes(term);
+      
+      row.style.display = match ? '' : 'none';
+    });
+  });
+
+  // Filtro por precio
+  const filterPrecio = document.getElementById('filter-precio');
+  
+  filterPrecio.addEventListener('change', function() {
+    const value = this.value;
+    tableRows.forEach(row => {
+      const precio = parseFloat(row.dataset.precio);
+      let show = true;
+      
+      if (value === "0-50") show = precio >= 0 && precio <= 50;
+      else if (value === "50-100") show = precio > 50 && precio <= 100;
+      else if (value === "100+") show = precio > 100;
+      
+      if (row.style.display !== 'none') {
+        row.style.display = show ? '' : 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
+{% endblock %}

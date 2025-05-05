@@ -1,17 +1,30 @@
 {% extends 'base.html' %}
 
-{% block title %}Listado de Bodegas{% endblock %}
+{% block title %}Bodegas - HOKO{% endblock %}
 
 {% block content %}
-<div class="content-container">
-  <h2 class="page-title">Listado de Bodegas</h2>
-
+<div class="products-container">
+  <h1>Bodegas</h1>
+  
   <!-- Barra de acciones -->
   <div class="products-actions">
-    <input type="text" id="search-input" placeholder="Buscar bodega..." class="search-input">
+    <input type="text" id="search-input" placeholder="Buscar por ID, nombre, dirección..." class="search-input">
     
     <div class="action-buttons">
+      <a href="{% url 'listar_bodegas' %}" class="btn btn-secondary">
+        <i class="fas fa-sync-alt"></i> Limpiar
+    </a>
       <a href="{% url 'crear_bodega' %}" class="btn crear">➕ Nueva Bodega</a>
+      
+      <!-- Filtros -->
+      <div class="filters">
+        <select id="filter-ciudad" class="filter-select">
+          <option value="">Todas las ciudades</option>
+          <option value="guayaquil">Guayaquil</option>
+          <option value="quito">Quito</option>
+          <option value="otra">Otras</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -21,6 +34,7 @@
       <thead>
         <tr>
           <th><input type="checkbox" id="select-all"></th>
+          <th>ID</th>
           <th>Nombre</th>
           <th>Dirección</th>
           <th>Teléfono</th>
@@ -29,23 +43,66 @@
       </thead>
       <tbody>
         {% for bodega in bodegas %}
-       
-        <tr> 
+        <tr data-id="{{ bodega.id }}"
+            data-nombre="{{ bodega.nombre|lower }}"
+            data-direccion="{{ bodega.direccion|default:''|lower }}"
+            data-ciudad="{% if 'guayaquil' in bodega.direccion|lower %}guayaquil{% elif 'quito' in bodega.direccion|lower %}quito{% else %}otra{% endif %}">
           <td><input type="checkbox" class="select-row" data-id="{{ bodega.id }}"></td>
+          <td>{{ bodega.id }}</td>
           <td>{{ bodega.nombre }}</td>
-          <td>{{ bodega.direccion }}</td>
-          <td>{{ bodega.telefono }}</td>
-
+          <td>{{ bodega.direccion|default:"-" }}</td>
+          <td>{{ bodega.telefono|default:"-" }}</td>
           <td>
-            <a href="{% url 'ver_bodega' id=bodega.id %}" class="btn ver">👁️</a>
-            <a href="{% url 'editar_bodega' id=bodega.id %}" class="btn editar">✏️</a>
-            <a href="{% url 'eliminar_bodega' id=bodega.id %}" class="btn eliminar">🗑️</a>
+            <a href="{% url 'ver_bodega' bodega.id %}" class="btn ver">👁️</a>
+            <a href="{% url 'editar_bodega' bodega.id %}" class="btn editar">✏️</a>
+            <a href="{% url 'eliminar_bodega' bodega.id %}" class="btn eliminar">🗑️</a>
           </td>
-
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Búsqueda instantánea
+  const searchInput = document.getElementById('search-input');
+  const tableRows = document.querySelectorAll('#bodegas-table tbody tr');
+  
+  searchInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    tableRows.forEach(row => {
+      const rowText = row.textContent.toLowerCase();
+      const rowId = row.dataset.id;
+      const rowNombre = row.dataset.nombre;
+      const rowDireccion = row.dataset.direccion;
+      
+      const match = rowText.includes(term) || 
+                   rowId.includes(term) || 
+                   rowNombre.includes(term) || 
+                   rowDireccion.includes(term);
+      
+      row.style.display = match ? '' : 'none';
+    });
+  });
+
+  // Filtro por ciudad
+  const filterCiudad = document.getElementById('filter-ciudad');
+  
+  filterCiudad.addEventListener('change', function() {
+    const value = this.value;
+    tableRows.forEach(row => {
+      const ciudad = row.dataset.ciudad;
+      const show = !value || ciudad === value;
+      
+      if (row.style.display !== 'none') {
+        row.style.display = show ? '' : 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
 {% endblock %}

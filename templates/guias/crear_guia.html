@@ -1,87 +1,181 @@
 {% extends 'base.html' %}
-
-{% block title %}Crear Guía de Envío{% endblock %}
-
-{% block content %}
-<h1>Crear Guía de Envío</h1>
-
-<form method="post" class="form-container" id="miFormulario">
-  {% csrf_token %}
-  
-  <!-- Columna Izquierda: Información Personal -->
-  <div class="personal-section">
-    <div class="form-group">
-      <label for="{{ form.cliente_nombre.id_for_label }}">Nombre completo *</label>
-      {{ form.cliente_nombre }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.cliente_telefono.id_for_label }}">Teléfono *</label>
-      {{ form.cliente_telefono }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.cliente_ciudad.id_for_label }}">Ciudad *</label>
-
-      <select name="ciudad" required>
-        <option value="Quito" {% if form_data.ciudad == 'Seleccion' %}selected{% endif %}>Seleccione Ciudad</option>
-        <option value="Guayaquil" {% if form_data.ciudad == 'Guayaquil' %}selected{% endif %}>Guayaquil</option>
-        <option value="Quito" {% if form_data.ciudad == 'Quito' %}selected{% endif %}>Quito</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
-      {{ form.cliente_direccion }}
-    </div>
-
-    <div class="form-group">
-      <label for="{{ form.cliente_direccion_secundaria.id_for_label }}">Dirección Secundaria *</label>
-      {{ form.cliente_direccion2}}
-    </div>
-    <!-- Si tienes un campo de dirección secundaria, agrégalo en el forms.py -->
-  </div>
-
-  <!-- Línea separadora entre columnas -->
-  <div class="separador"></div>
-  <div class="linea-horizontal"></div>
-
-  
-    <!-- Columna Derecha: Selección de Producto y Orden -->
-    <div class="right-section">
-      <div class="form-group">
-        <label for="{{ form.producto.id_for_label }}"><strong>Selecciona un producto</strong></label>
-        {{ form.producto }}
-      </div>
  
-      <div id="contenedor-productos" style="display: none;">
-        <table class="tabla-rosada">
-          <thead>
-            <tr>
-              <th>Imagen</th>
-              <th>Producto</th>
-              <th>Precio</th>
-              <th>Cantidad</th>
-              <th>Total</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody id="cuerpo-tabla">
-            <!-- Productos dinámicos -->
-          </tbody>
-        </table>
-      </div>
-
-    <div class="linea-horizontal"></div>
-
-    <div class="orden-columna">
-      <label for="{{ form.contenido.id_for_label }}"><strong>Contenido de la orden (máx 39 letras)</strong></label>
-      {{ form.contenido }}
+{% block title %}Crear Guía de Envío{% endblock %}
+ 
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Crear Guía de Envío</h1>
+ 
+    <!-- Mensajes del servidor -->
+    {% if messages %}
+    <div class="alert-container mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
     </div>
-    <div class="orden-columna">
-      <label for="{{ form.cantidad.id_for_label }}"><strong>Cantidad de la orden</strong></label>
-      {{ form.cantidad }}
-    </div>
-  </div>
-
-  <button type="submit" class="btn btn-primary">Crear Guía</button>
-</form>
-
+    {% endif %}
+ 
+    <form method="post" id="guiaForm" class="needs-validation" novalidate>
+        {% csrf_token %}
+ 
+        <!-- Información del Cliente -->
+        <fieldset class="border p-3 mb-4 rounded">
+            <legend class="w-auto px-2">Información del Cliente</legend>
+ 
+            <div class="form-group mb-3">
+                <label for="id_cliente_nombre">Nombre completo *</label>
+                <input type="text" name="cliente_nombre" id="id_cliente_nombre"
+                    class="form-control {% if form.cliente_nombre.errors %}is-invalid{% endif %}"
+                    value="{{ form.cliente_nombre.value|default:'' }}" required>
+                {% if form.cliente_nombre.errors %}
+                <div class="invalid-feedback">
+                    {{ form.cliente_nombre.errors.as_text }}
+                </div>
+                {% endif %}
+            </div>
+ 
+            <div class="form-group mb-3">
+                <label for="id_cliente_telefono">Teléfono *</label>
+                <input type="text" name="cliente_telefono" id="id_cliente_telefono"
+                    class="form-control {% if form.cliente_telefono.errors %}is-invalid{% endif %}"
+                    value="{{ form.cliente_telefono.value|default:'' }}" required>
+                {% if form.cliente_telefono.errors %}
+                <div class="invalid-feedback">
+                    {{ form.cliente_telefono.errors.as_text }}
+                </div>
+                {% endif %}
+            </div>
+ 
+            <div class="form-group">
+                <label for="{{ form.cliente_ciudad.id_for_label }}">Ciudad *</label>
+                {{ form.cliente_ciudad }}
+                {% if form.cliente_ciudad.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.cliente_ciudad.errors.as_text }}
+                    </div>
+                {% endif %}
+            </div>
+ 
+            <div class="form-group">
+                <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
+                {{ form.cliente_direccion }}
+              </div>
+           
+              <div class="form-group">
+                <label for="{{ form.cliente_direccion_secundaria.id_for_label }}">Dirección Secundaria *</label>
+                {{ form.cliente_direccion2}}
+              </div>
+            </div>
+ 
+            <!-- Estado oculto -->
+            <div class="form-group" style="display: none;">
+                <label for="id_estado">Estado *</label>
+                <select name="estado" id="id_estado" class="form-control" required>
+                    {% for value, label in form.fields.estado.choices %}
+                    <option value="{{ value }}" {% if value == 'pendiente' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+ 
+        </fieldset>
+ 
+        <!-- Información del Envío -->
+        <fieldset class="border p-3 rounded">
+            <legend class="w-auto px-2">Información del Envío</legend>
+ 
+            <div class="form-group mb-3">
+                <label for="id_producto">Producto *</label>
+                <select name="producto" id="id_producto"
+                    class="form-control {% if form.producto.errors %}is-invalid{% endif %}" required>
+                    <option value="">Seleccione un producto</option>
+                    {% for producto in productos %}
+                    <option value="{{ producto.id }}"
+                        {% if form.producto.value == producto.id|stringformat:"s" %}selected{% endif %}>
+                        {{ producto.nombre }} ({{ producto.referencia }})
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.producto.errors %}
+                <div class="invalid-feedback">
+                    {{ form.producto.errors.as_text }}
+                </div>
+                {% endif %}
+            </div>
+ 
+            <div class="form-group mb-3">
+                <label for="id_cantidad">Cantidad *</label>
+                <input type="number" name="cantidad" id="id_cantidad"
+                    class="form-control {% if form.cantidad.errors %}is-invalid{% endif %}"
+                    value="{{ form.cantidad.value|default:'1' }}" min="1" required>
+                {% if form.cantidad.errors %}
+                <div class="invalid-feedback">
+                    {{ form.cantidad.errors.as_text }}
+                </div>
+                {% endif %}
+            </div>
+ 
+            <div class="form-group mb-3">
+                <label for="id_contenido">Contenido (opcional, máx 39 caracteres)</label>
+                <input type="text" name="contenido" id="id_contenido"
+                    class="form-control {% if form.contenido.errors %}is-invalid{% endif %}"
+                    value="{{ form.contenido.value|default:'' }}" maxlength="39">
+                {% if form.contenido.errors %}
+                <div class="invalid-feedback">
+                    {{ form.contenido.errors.as_text }}
+                </div>
+                {% endif %}
+            </div>
+ 
+        </fieldset>
+ 
+        <!-- Botones -->
+        <div class="form-actions text-right mt-4">
+            <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-save"></i> Guardar y Volver
+            </button>
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+        </div>
+ 
+    </form>
+</div>
+ 
+ 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    document.getElementById('guiaForm').addEventListener('submit', function(e) {
+        let isValid = true;
+        const requiredFields = ['cliente_nombre', 'cliente_telefono', 'cliente_ciudad',
+                              'cliente_direccion', 'producto', 'cantidad'];
+       
+        requiredFields.forEach(function(fieldId) {
+            const field = document.getElementById('id_' + fieldId);
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+               
+                if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'Este campo es requerido.';
+                    field.parentNode.insertBefore(errorDiv, field.nextSibling);
+                }
+            }
+        });
+       
+        if (!isValid) {
+            e.preventDefault();
+            alert('Por favor complete todos los campos requeridos.');
+        } else {
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        }
+    });
+});
+</script>
 {% endblock %}
+ 

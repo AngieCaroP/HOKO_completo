@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Guía #{{ guia.id }} - HOKO{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Editar Guía #{{ guia.id }}</h1>
+    
+    <form method="post" class="form-container">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.cliente_nombre.id_for_label }}">Nombre completo *</label>
+                    {{ form.cliente_nombre }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.cliente_telefono.id_for_label }}">Teléfono *</label>
+                    {{ form.cliente_telefono }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.ciudad.id_for_label }}">Ciudad</label>
+                    {{ form.cliente_ciudad }}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="{{ form.producto.id_for_label }}">Producto *</label>
+                    {{ form.producto }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.cantidad.id_for_label }}">Cantidad *</label>
+                    {{ form.cantidad }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.estado.id_for_label }}">Estado *</label>
+                    {{ form.estado }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
+            {{ form.cliente_direccion }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.cliente_direccion2.id_for_label }}">Dirección secundaria</label>
+            {{ form.cliente_direccion2 }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.contenido.id_for_label }}">Contenido</label>
+            {{ form.contenido }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+            {{ form.observaciones }}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

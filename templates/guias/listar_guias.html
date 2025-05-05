@@ -1,57 +1,107 @@
 {% extends 'base.html' %}
 
-{% block title %}Listado de Guías - HOKO{% endblock %}
+{% block title %}Guías de Envío - HOKO{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="mt-4">Guías de Envío</h1>
-
+<div class="products-container">
+    <h1>Guías de Envío</h1>
 
     <!-- Barra de acciones -->
     <div class="products-actions">
-        <input type="text" placeholder="Buscar producto..." class="search-input" id="search-input">
+        <form method="get" id="search-form" class="search-form" style="display: flex; flex-grow: 1; align-items: center; gap: 5px;">
+            <input type="text" name="search" id="search-input" 
+                   placeholder="Buscar por ID, código, cliente, producto..." 
+                   class="search-form-input" 
+                   value="{{ request.GET.search }}"
+                   style="flex-grow: 1; min-width: 800px; height: 38px; padding: 0 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="submit" class="btn search-form-btn" style="height: 38px; padding: 0 15px; white-space: nowrap;">
+                <i class="fas fa-search" style="margin-right: 5px;"></i> Buscar
+            </button>
+        </form>
+
 
         <div class="action-buttons">
-            <button class="btn buscar" id="btn-buscar">🔍Buscar</button>
-            <a class="btn crear" href="{% url 'crear_guia' %}">➕Crear Guia</a>
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+                <i class="fas fa-sync-alt"></i> Limpiar
+            </a>
+            <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
+
+            <!-- Filtros -->
+            <div class="popover-container">
+                <button type="button" class="popover-toggle btn" id="togglePopover">🛠️ Filtros</button>
+                <div class="popover hidden" id="filterPopover">
+                    <form method="get" id="filters-form">
+                        <h4>ESTADO</h4>
+                        <select name="estado" class="filter-select">
+                            <option value="">Todos los estados</option>
+                            {% for value, label in estados %}
+                            <option value="{{ value }}" {% if request.GET.estado|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <h4>CIUDAD</h4>
+                        <select name="ciudad" class="filter-select">
+                            <option value="">Todas las ciudades</option>
+                            {% for ciudad in ciudades %}
+                            <option value="{{ ciudad.0 }}" {% if request.GET.ciudad|stringformat:"s" == ciudad.0|stringformat:"s" %}selected{% endif %}>{{ ciudad.1 }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <h4>FECHA DE CRACIÓN</h4>
+                        <div class="date-filters">
+                            <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="filter-date">
+                            <span>a</span>
+                            <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="filter-date">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Aplicar</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Aquí va tu tabla -->
+    
+    <!-- Tabla de guías -->
     <div class="table-wrapper">
-        <table class="products-table" id="products-table">
+        <table class="products-table" id="guias-table">
             <thead>
-
-
                 <tr>
                     <th><input type="checkbox" id="select-all"></th>
                     <th>ID</th>
                     <th>Código</th>
                     <th>Cliente</th>
+                    <th>Ciudad</th>
                     <th>Producto</th>
                     <th>Estado</th>
-                    <th>Fecha</th>
+                    <th>Creación</th>
+                    <th>Modificación</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for guia in guias %}
-                <tr>
-                    <td><input type="checkbox" class="select-row" data-id="{{ producto.id }}"></td>
+                <tr data-id="{{ guia.id }}" 
+                    data-codigo="{{ guia.codigo_seguimiento|lower }}" 
+                    data-cliente="{{ guia.cliente_nombre|lower }}" 
+                    data-producto="{{ guia.producto.nombre|lower }}"
+                    data-ciudad="{{ guia.cliente_ciudad|lower }}" 
+                    data-estado="{{ guia.estado }}">
+                    <td><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
                     <td>{{ guia.id }}</td>
                     <td>{{ guia.codigo_seguimiento }}</td>
                     <td>{{ guia.cliente_nombre }}</td>
+                    <td>{{ guia.cliente_ciudad }}</td>
                     <td>{{ guia.producto.nombre }}</td>
                     <td>
                         <span class="badge 
-                                    {% if guia.estado == 'entregado' %}bg-success
-                                    {% elif guia.estado == 'cancelado' %}bg-danger
-                                    {% else %}bg-warning text-dark{% endif %}">
+                            {% if guia.estado == 'entregado' %}badge-success
+                            {% elif guia.estado == 'cancelado' %}badge-danger
+                            {% else %}badge-warning{% endif %}">
                             {{ guia.get_estado_display }}
                         </span>
                     </td>
-                    <td>{{ guia.fecha_creacion|date:"d/m/Y" }}</td>
-
+                    <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
                     <td>
                         <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
                         <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
@@ -60,26 +110,62 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center">No hay guías registradas</td>
+                    <td colspan="10" class="text-center">No hay guías registradas</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-</div>
-</div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-    $(document).ready(function () {
-        $('#dataTable').DataTable({
-            order: [[0, 'desc']],
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+document.addEventListener('DOMContentLoaded', function() {
+    // Popover de filtros
+    const toggle = document.getElementById('togglePopover');
+    const popover = document.getElementById('filterPopover');
+    
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        popover.classList.toggle('hidden');
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!popover.contains(e.target) && !toggle.contains(e.target)) {
+            popover.classList.add('hidden');
+        }
+    });
+
+    // Manejar el formulario de búsqueda para preservar otros filtros
+    const searchForm = document.getElementById('search-form');
+    const filterForm = document.getElementById('filters-form');
+    
+    searchForm.addEventListener('submit', function(e) {
+        // Copiar todos los filtros actuales al formulario de búsqueda
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            if (input.name && input.value) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = input.name;
+                hiddenInput.value = input.value;
+                searchForm.appendChild(hiddenInput);
             }
         });
     });
+
+    // Manejar cambios en los filtros para preservar la búsqueda
+    filterForm.addEventListener('submit', function(e) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput.value.trim()) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'search';
+            hiddenInput.value = searchInput.value.trim();
+            filterForm.appendChild(hiddenInput);
+        }
+    });
+});
 </script>
 {% endblock %}
