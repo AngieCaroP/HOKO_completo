@@ -3,6 +3,12 @@
 {% block title %}Gestión de Stocks - HOKO{% endblock %}
 
 {% block content %}
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
 <div class="products-container">
   <h1>Gestión de Stocks</h1>
   
@@ -11,9 +17,15 @@
     <input type="text" id="search-input" placeholder="Buscar stock..." class="search-input">
     
     <div class="action-buttons">
+      <a href="{% url 'listar_stocks' %}" class="btn btn-secondary">
+        <i class="fas fa-sync-alt"></i> Limpiar
+    </a>
       <a href="{% url 'crear_stock' %}" class="btn crear">➕ Nuevo Stock</a>
       
       <!-- Filtros -->
+      <div class="popover-container">
+        <button type="button" class="popover-toggle btn" id="togglePopover">🛠️ Filtros</button>
+        <div class="popover hidden" id="filterPopover">
       <div class="filters">
         <select id="filter-status" class="filter-select">
           <option value="">Todos los estados</option>
@@ -24,16 +36,19 @@
         
         <select id="filter-bodega" class="filter-select">
           <option value="">Todas las bodegas</option>
-          <!-- Bodegas fijas -->
-          <option value="guayaquil">GUAYAQUIL - Bodega Principal</option>
-          <option value="quito">QUITO - Bodega Norte</option>
           <!-- Bodegas dinámicas de la base de datos -->
           {% for bodega in bodegas %}
           <option value="{{ bodega.id }}">{{ bodega.nombre|upper }}</option>
           {% endfor %}
         </select>
+        <button class="exportar">⬇ Exportar como TXT</button>
+        <button class="exportarExcel">⬇ Exportar como Excel</button>
+        <button class="exportarPdf">⬇ Exportar como PDF</button>
+    
       </div>
     </div>
+  </div>
+</div>
   </div>
 
   <!-- Tabla de stocks -->
@@ -63,9 +78,9 @@
           <td>{{ stock.producto.nombre }}</td>
           <td>
             {% if 'guayaquil' in stock.bodega.nombre|lower %}
-              GUAYAQUIL - Bodega Principal
+              GUAYAQUIL
             {% elif 'quito' in stock.bodega.nombre|lower %}
-              QUITO - Bodega Norte
+              QUITO 
             {% else %}
               {{ stock.bodega.nombre }}
             {% endif %}
@@ -135,6 +150,77 @@ document.addEventListener('DOMContentLoaded', function() {
   // Inicializar filtros
   applyFilters();
 });
+
+
+   // Función para obtener los datos visibles de la tabla
+   function obtenerDatosDeTabla() {
+    const rows = document.querySelectorAll('#stocks-table tbody tr');
+    const datos = [];
+
+    rows.forEach(row => {
+      if (row.style.display !== 'none') {
+        const celdas = row.querySelectorAll('td');
+        datos.push({
+          ID: celdas[1].innerText.trim(),
+          Producto: celdas[2].innerText.trim(),
+          Bodega: celdas[3].innerText.trim(),
+          Stock: celdas[4].innerText.trim(),
+          Umbral: celdas[5].innerText.trim(),
+          Estado: celdas[6].innerText.trim()
+        });
+      }
+    });
+
+    return datos;
+  }
+
+  // Exportar como TXT
+  document.querySelector('.exportar').addEventListener('click', function () {
+    const datos = obtenerDatosDeTabla();
+    let contenido = 'ID\tProducto\tBodega\tStock\tUmbral\tEstado\n';
+
+    datos.forEach(item => {
+      contenido += `${item.ID}\t${item.Producto}\t${item.Bodega}\t${item.Stock}\t${item.Umbral}\t${item.Estado}\n`;
+    });
+
+    const blob = new Blob([contenido], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `stocks_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+  });
+
+  // Exportar como Excel
+  document.querySelector('.exportarExcel').addEventListener('click', function () {
+    const datos = obtenerDatosDeTabla();
+    const libro = XLSX.utils.book_new();
+    const hoja = XLSX.utils.json_to_sheet(datos);
+    XLSX.utils.book_append_sheet(libro, hoja, 'Stocks');
+    XLSX.writeFile(libro, `stocks_${new Date().toISOString().split('T')[0]}.xlsx`);
+  });
+
+  // Exportar como PDF
+  document.querySelector('.exportarPdf').addEventListener('click', function () {
+    const datos = obtenerDatosDeTabla();
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(14);
+    doc.text('Reporte de Stocks', 105, 15, { align: 'center' });
+
+    const headers = [['ID', 'Producto', 'Bodega', 'Stock', 'Umbral', 'Estado']];
+    const rows = datos.map(item => [
+      item.ID, item.Producto, item.Bodega, item.Stock, item.Umbral, item.Estado
+    ]);
+
+    doc.autoTable({
+      startY: 25,
+      head: headers,
+      body: rows,
+      styles: { fontSize: 10 }
+    });
+
+    doc.save(`stocks_${new Date().toISOString().split('T')[0]}.pdf`);
+  });
+
 </script>
 
 

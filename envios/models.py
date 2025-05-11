@@ -24,36 +24,33 @@ class Bodega(models.Model):
         return self.nombre
 
 # Stock
+from django.db import models
+
 class Stock(models.Model):
-    """Modelo que representa el stock de un producto en una bodega específica."""
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     bodega = models.ForeignKey(Bodega, on_delete=models.CASCADE)
-    stock_actual = models.IntegerField(default=0)
-    umbral_minimo = models.IntegerField(default=0)
-    
-    ESTADOS = (
-        ('sin_stock', 'Sin stock'),
-        ('stock_bajo', 'Stock bajo'),
-        ('en_stock', 'En stock'),
-    )
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='en_stock')
-    
+    stock_actual = models.IntegerField()
+    umbral_minimo = models.IntegerField()
+    ESTADO_CHOICES = [
+        ('ok', 'Stock OK'),
+        ('bajo', 'Stock Bajo'),
+        ('sin', 'Sin Stock'),
+    ]
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, editable=False)
+
     def save(self, *args, **kwargs):
-        """
-        Actualiza automáticamente el estado del stock según la cantidad disponible
-        antes de guardar en la base de datos.
-        """
+        # Lógica automática del estado según el stock
         if self.stock_actual <= 0:
-            self.estado = 'sin_stock'
+            self.estado = 'Sin Stock'
         elif self.stock_actual < self.umbral_minimo:
-            self.estado = 'stock_bajo'
+            self.estado = 'Stock bajo'
         else:
-            self.estado = 'en_stock'
+            self.estado = 'Stock ok'
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
-        """Representación en string del registro de stock."""
-        return f"{self.producto} - {self.bodega}"
+        return f"{self.producto.nombre} - {self.bodega.nombre} - {self.stock_actual}"
+
 
 #guias
 class GuiaEnvio(models.Model):

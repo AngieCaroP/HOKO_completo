@@ -8,6 +8,8 @@ from .models import Producto, Stock, Bodega, GuiaEnvio
 from .forms import ProductoForm, StockForm, BodegaForm, GuiaEnvioForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+import json
+
 
 # ===== PRODUCTOS =====
 def listar_productos(request):
@@ -334,6 +336,49 @@ def producto_api_detail(request, pk):
         'id': producto.id,
         'nombre': producto.nombre,
         'referencia': producto.referencia if hasattr(producto, 'referencia') else '',
+        'precio': str(producto.precio),
+        'imagen': producto.imagen.url if producto.imagen else None,
+    }
+    return JsonResponse(data)
+
+
+#api para productos 
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db.models import Q
+from .models import Producto
+
+@require_GET
+def search_productos(request):
+    search_query = request.GET.get('search', '').strip()
+    
+    productos = Producto.objects.all()
+    
+    if search_query:
+        productos = productos.filter(
+            Q(nombre__icontains=search_query) |
+            Q(referencia__icontains=search_query)
+        )[:10]  # Limitar a 10 resultados
+    
+    results = []
+    for producto in productos:
+        results.append({
+            'id': producto.id,
+            'nombre': producto.nombre,
+            'referencia': producto.referencia,
+            'precio': str(producto.precio),
+            'imagen': producto.imagen.url if producto.imagen else None,
+        })
+    
+    return JsonResponse(results, safe=False)
+
+@require_GET
+def producto_detail_api(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    data = {
+        'id': producto.id,
+        'nombre': producto.nombre,
+        'referencia': producto.referencia,
         'precio': str(producto.precio),
         'imagen': producto.imagen.url if producto.imagen else None,
     }

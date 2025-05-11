@@ -6,6 +6,7 @@
 <div class="form-container">
   <h1>Crear Stock</h1>
   <form method="post">
+    
     {% csrf_token %}
     {{ form.as_p }}
     <div class="form-actions">
@@ -16,6 +17,7 @@
 </div>
 
 <style>
+  
   .form-container {
     max-width: 600px;
     margin: 2rem auto;

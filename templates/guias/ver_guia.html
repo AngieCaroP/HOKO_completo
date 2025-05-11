@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container">
-    <div class="card">
+    <div class="card shadow-lg rounded">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="mb-0">Guía #{{ guia.id }}</h3>
             <span class="badge badge-{% if guia.estado == 'entregado' %}success
@@ -13,7 +13,7 @@
                 {{ guia.get_estado_display }}
             </span>
         </div>
-        
+
         <div class="card-body">
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -26,7 +26,7 @@
                     <p><strong>Dirección secundaria:</strong> {{ guia.cliente_direccion2 }}</p>
                     {% endif %}
                 </div>
-                
+
                 <div class="col-md-6">
                     <h5>Información del Envío</h5>
                     <p><strong>Código de seguimiento:</strong> {{ guia.codigo_seguimiento }}</p>
@@ -34,12 +34,12 @@
                     <p><strong>Última actualización:</strong> {{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-12">
                     <h5>Detalles del Producto</h5>
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table table-bordered">
                             <thead>
                                 <tr>
                                     <th>Producto</th>
@@ -61,20 +61,176 @@
                 </div>
             </div>
         </div>
-        
-        <div class="card-footer text-right">
-            <div class="btn-group">
-                <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Volver
-                </a>
-                <a href="{% url 'editar_guia' guia.id %}" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-                <a href="{% url 'eliminar_guia' guia.id %}" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Eliminar
-                </a>
-            </div>
+
+       
+    </div>
+    <div class="card-footer text-right">
+        <div class="btn-group">
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <a href="{% url 'editar_guia' guia.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="{% url 'eliminar_guia' guia.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Eliminar
+            </a>
         </div>
     </div>
 </div>
+
+<style>
+    body {
+        background-color: #f9fafb;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+    }
+
+    .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        color: #0d6efd;
+    }
+
+    .card {
+        background-color: white;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        background-color: #f1f1f1;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem;
+        font-weight: 600;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 0.6rem 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.5rem;
+        background-color: #fff;
+        font-size: 1rem;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        outline: none;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.6rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0b5ed7;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background-color: #f1f1f1;
+        color: #333;
+    }
+
+    .btn-secondary:hover {
+        background-color: #e2e2e2;
+        transform: translateY(-1px);
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        transform: translateY(-1px);
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-bordered th, .table-bordered td {
+        padding: 1rem;
+        border: 1px solid #ddd;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .row {
+            flex-direction: column;
+        }
+
+        .card-header {
+            text-align: center;
+        }
+    }
+</style>
+
 {% endblock %}
