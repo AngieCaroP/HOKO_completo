@@ -32,13 +32,14 @@ urlpatterns = [
       # Guías
     path('guias/', views.listar_guias, name='listar_guias'),
     path('guias/crear/', views.crear_guia, name='crear_guia'),
-  path('guias/<int:id>/', views.ver_guia, name='ver_guia'),  # Corregido
+    path('guias/<int:id>/', views.ver_guia, name='ver_guia'),  # Corregido
     path('guias/<int:id>/editar/', views.editar_guia, name='editar_guia'),  # Corregido
     path('guias/<int:id>/eliminar/', views.eliminar_guia, name='eliminar_guia'),  # Corregido
+
     
     # API
     path('api/productos/<int:pk>/', views.producto_api_detail, name='producto_api_detail'),
-  path('api/productos/', views.search_productos, name='search_productos'),
+    path('api/productos/', views.search_productos, name='search_productos'),
     path('api/productos/<int:pk>/', views.producto_detail_api, name='producto_detail_api'),
 ]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -3,6 +3,10 @@
 {% block title %}Guías de Envío - HOKO{% endblock %}
 
 {% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
 <div class="products-container">
     <h1>Guías de Envío</h1>
 
@@ -53,7 +57,9 @@
                             <span>a</span>
                             <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="filter-date">
                         </div>
-
+<button class="btn exportar">⬇ Exportar como TXT</button>
+                        <button class="btn exportarExcel">⬇ Exportar como Excel</button>
+                        <button class="btn exportarPdf">⬇ Exportar como PDF</button>
                         <button type="submit" class="btn btn-primary">Aplicar</button>
                     </form>
                 </div>
@@ -167,5 +173,96 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+    // Función para obtener datos de la tabla
+    function getTableData() {
+        const rows = document.querySelectorAll('#guias-table tbody tr:not([style*="display: none"])');
+        return Array.from(rows).map(row => {
+            const cells = row.querySelectorAll('td');
+            return {
+                ID: cells[1].textContent.trim(),
+                Código: cells[2].textContent.trim(),
+                Cliente: cells[3].textContent.trim(),
+                Ciudad: cells[4].textContent.trim(),
+                Producto: cells[5].textContent.trim(),
+                Estado: cells[6].textContent.trim(),
+                Creación: cells[7].textContent.trim()
+            };
+        });
+    }
+
+    // Exportar a TXT
+    document.querySelector('.exportar').addEventListener('click', function() {
+        const data = getTableData();
+        let txtContent = 'Guías de Envío\n\n';
+        txtContent += 'ID\tCódigo\tCliente\tCiudad\tProducto\tEstado\tCreación\n';
+        
+        data.forEach(item => {
+            txtContent += `${item.ID}\t${item.Código}\t${item.Cliente}\t${item.Ciudad}\t${item.Producto}\t${item.Estado}\t${item.Creación}\n`;
+        });
+        
+        const blob = new Blob([txtContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `guias_exportacion_${new Date().toISOString().slice(0,10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Exportar a Excel
+    document.querySelector('.exportarExcel').addEventListener('click', function() {
+        const data = getTableData();
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Guías");
+        XLSX.writeFile(wb, `guias_exportacion_${new Date().toISOString().slice(0,10)}.xlsx`);
+    });
+
+    // Exportar a PDF
+    document.querySelector('.exportarPdf').addEventListener('click', function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const data = getTableData();
+        
+        // Encabezados
+        const headers = [
+            'ID',
+            'Código',
+            'Cliente', 
+            'Ciudad',
+            'Producto',
+            'Estado',
+            'Creación'
+        ];
+        
+        // Datos
+        const rows = data.map(item => [
+            item.ID,
+            item.Código,
+            item.Cliente,
+            item.Ciudad,
+            item.Producto,
+            item.Estado,
+            item.Creación
+        ]);
+        
+        // Título
+        doc.text('Reporte de Guías de Envío', 14, 15);
+        
+        // Tabla
+        doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: 25,
+            margin: { top: 20 },
+            styles: { fontSize: 8 }
+        });
+        
+        doc.save(`guias_exportacion_${new Date().toISOString().slice(0,10)}.pdf`);
+    });
+
+
+
 </script>
 {% endblock %}

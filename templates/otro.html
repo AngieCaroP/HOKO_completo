@@ -1,3 +1,726 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+    {% csrf_token %}
+
+    <!-- Columna Izquierda: Información Personal -->
+    <div class="personal-section">
+        <div class="form-group">
+            <label for="id_cliente_nombre">Nombre completo *</label>
+            <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_telefono">Teléfono *</label>
+            <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_ciudad">Ciudad *</label>
+            <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                {% for value, label in form.fields.cliente_ciudad.choices %}
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion">Dirección *</label>
+            <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion2">Dirección secundaria</label>
+            <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
+        </div>
+    </div>
+
+    <!-- Línea separadora entre columnas -->
+    <div class="separador"></div>
+    <div class="linea-horizontal"></div>
+
+
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+        <div class="form-group">
+            <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+            <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
+            
+            <!-- Contenedor para mostrar los resultados de búsqueda -->
+            <div id="producto-results" class="dropdown-results" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultados-busqueda">
+                        <!-- Resultados de búsqueda dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla para productos seleccionados -->
+            <div id="contenedor-productos" class="mt-3">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productos-seleccionados">
+                        <!-- Productos seleccionados aparecerán aquí -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                            <td id="total-compra">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_contenido"><strong>Contenido de la orden</strong></label>
+            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="500" readonly>
+            <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados</small>
+        </div>
+ 
+        <!-- Estado oculto -->
+        <input type="hidden" name="estado" value="pendiente">
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions text-right mt-4">
+        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+</form>
+
+<style>
+    /* Estilo para las imágenes de productos */
+    .img-producto {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+    }
+</style>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para validar el formulario
+    function validarFormulario() {
+        let isValid = true;
+        const requiredFields = [
+             'cliente_nombre', 
+                'cliente_telefono',
+                'cliente_ciudad',
+                'cliente_direccion'
+        ]; 
+
+        requiredFields.forEach(fieldName => {
+            const field = document.querySelector(`[name="${fieldName}"]`);
+            if (!field || !field.value.trim()) {
+                isValid = false;
+                if (field) {
+                    field.classList.add('is-invalid');
+                    
+                    if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Este campo es requerido.';
+                        field.parentNode.insertBefore(errorDiv, field.nextSibling);
+                    }
+                }
+            } else if (field) {
+                field.classList.remove('is-invalid');
+                const errorDiv = field.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+
+        return isValid;
+    }
+
+    // Manejador del botón de guardar
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            if (!validarFormulario()) {
+                e.preventDefault();
+                alert('Por favor complete todos los campos requeridos.');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+        });
+    }
+
+    // Validación al enviar el formulario
+    const form = document.getElementById('miFormulario');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validarFormulario()) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Array para almacenar productos seleccionados
+    let productosSeleccionados = [];
+    
+    // Función para generar el contenido de la orden
+    function generarContenidoOrden() {
+        let contenido = '';
+        const maxCaracteres = 500;
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const item = `${producto.cantidad}- ${producto.nombre}`;
+            
+            if (index > 0) {
+                // Verificar si al agregar este item superamos el límite
+                if ((contenido.length + item.length + 2) <= maxCaracteres) {
+                    contenido += ', ' + item;
+                } else {
+                    // Si supera el límite, truncar y salir del bucle
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            } else {
+                contenido = item;
+                
+                // Verificar si solo este item supera el límite
+                if (contenido.length > maxCaracteres) {
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            }
+        });
+        
+        document.getElementById('id_contenido').value = contenido;
+    }
+    
+    // Función para actualizar el total
+    function actualizarTotal() {
+        let total = 0;
+        productosSeleccionados.forEach(producto => {
+            total += producto.precio * producto.cantidad;
+        });
+        document.getElementById('total-compra').textContent = total.toFixed(2);
+        generarContenidoOrden();
+    }
+
+    // Función para renderizar la tabla de productos
+    function renderizarProductos() {
+        const tbody = document.getElementById('productos-seleccionados');
+        tbody.innerHTML = '';
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const subtotal = producto.precio * producto.cantidad;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${producto.imagen}" class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                <td>${producto.nombre}</td>
+                <td>$${producto.precio.toFixed(2)}</td>
+                <td>
+                    <input type="number" name="productos[${index}][cantidad]" 
+                           class="form-control cantidad-producto" 
+                           min="1" value="${producto.cantidad}" 
+                           data-index="${index}"
+                           style="width: 70px;">
+                </td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm btn-eliminar" 
+                            data-index="${index}">✕</button>
+                </td>
+                <input type="hidden" name="productos[${index}][id]" value="${producto.id}">
+                <input type="hidden" name="productos[${index}][nombre]" value="${producto.nombre}">
+                <input type="hidden" name="productos[${index}][precio]" value="${producto.precio}">
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Agregar event listeners a los nuevos elementos
+        document.querySelectorAll('.cantidad-producto').forEach(input => {
+            input.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                const nuevaCantidad = parseInt(this.value) || 1;
+                productosSeleccionados[index].cantidad = nuevaCantidad;
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                productosSeleccionados.splice(index, 1);
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        actualizarTotal();
+    }
+
+    // Función para agregar producto
+    function agregarProducto(id, nombre, imagen, precio) {
+        // Verificar si el producto ya existe
+        const existe = productosSeleccionados.some(p => p.id === id);
+        
+        if (!existe) {
+            productosSeleccionados.push({
+                id: id,
+                nombre: nombre,
+                imagen: imagen || 'https://via.placeholder.com/50',
+                precio: parseFloat(precio),
+                cantidad: 1
+            });
+            
+            renderizarProductos();
+        } else {
+            alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
+        }
+    }
+
+    // Función para buscar productos
+    function searchProductos(query) {
+        if (query.length < 2) {
+            document.getElementById('producto-results').style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultadosBusqueda = document.getElementById('resultados-busqueda');
+                resultadosBusqueda.innerHTML = '';
+                
+                if (data.length > 0) {
+                    data.forEach(producto => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
+                                 class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                            <td>${producto.nombre}</td>
+                            <td>$${producto.precio}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary btn-agregar" 
+                                    data-id="${producto.id}"
+                                    data-nombre="${producto.nombre.replace(/"/g, '&quot;')}"
+                                    data-imagen="${producto.imagen || 'https://via.placeholder.com/50'}"
+                                    data-precio="${producto.precio}">
+                                    Agregar
+                                </button>
+                            </td>
+                        `;
+                        resultadosBusqueda.appendChild(row);
+                    });
+                    
+                    // Agregar event listeners a los botones de agregar
+                    document.querySelectorAll('.btn-agregar').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            agregarProducto(
+                                this.dataset.id,
+                                this.dataset.nombre,
+                                this.dataset.imagen,
+                                this.dataset.precio
+                            );
+                            document.getElementById('producto-results').style.display = 'none';
+                            document.getElementById('busqueda-producto').value = '';
+                        });
+                    });
+                    
+                    document.getElementById('producto-results').style.display = 'block';
+                } else {
+                    document.getElementById('producto-results').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar productos:', error);
+                document.getElementById('producto-results').style.display = 'none';
+            });
+    }
+
+    // Event listeners
+    document.getElementById('busqueda-producto').addEventListener('input', function() {
+        searchProductos(this.value);
+    });
+
+    // Ocultar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#producto-results') && !e.target.closest('#busqueda-producto')) {
+            document.getElementById('producto-results').style.display = 'none';
+        }
+    });
+
+    // Validación antes de enviar
+    document.getElementById('miFormulario').addEventListener('submit', function(e) {
+        if (productosSeleccionados.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un producto');
+            return false;
+        }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        return true;
+    });
+
+    // Precargar productos si estamos editando
+    {% if form.productos.value %}
+        {% for producto in form.productos.value %}
+            agregarProducto(
+                {{ producto.id }}, 
+                '{{ producto.nombre|escapejs }}', 
+                '{{ producto.imagen|default:"https://via.placeholder.com/50" }}', 
+                {{ producto.precio }}
+            );
+        {% endfor %}
+        renderizarProductos();
+    {% endif %}
+});
+    
+
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+///
+
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+    {% csrf_token %}
+
+    <!-- Columna Izquierda: Información Personal -->
+    <div class="personal-section">
+        <div class="form-group">
+            <label for="id_cliente_nombre">Nombre completo *</label>
+            <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+            {% if form.cliente_nombre.errors %}
+                <div class="invalid-feedback">{{ form.cliente_nombre.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_telefono">Teléfono *</label>
+            <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+            {% if form.cliente_telefono.errors %}
+                <div class="invalid-feedback">{{ form.cliente_telefono.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_ciudad">Ciudad *</label>
+            <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                {% for value, label in form.fields.cliente_ciudad.choices %}
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if form.cliente_ciudad.errors %}
+                <div class="invalid-feedback">{{ form.cliente_ciudad.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion">Dirección *</label>
+            <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+            {% if form.cliente_direccion.errors %}
+                <div class="invalid-feedback">{{ form.cliente_direccion.errors.as_text }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_cliente_direccion2">Dirección secundaria</label>
+            <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
+        </div>
+    </div>
+
+    <!-- Línea separadora entre columnas -->
+    <div class="separador"></div>
+    <div class="linea-horizontal"></div>
+
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+        <div class="form-group">
+            <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+            <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
+            <input type="hidden" name="producto" id="id_producto" required>
+
+            <!-- Contenedor para mostrar los resultados de búsqueda -->
+            <div id="producto-results" class="dropdown-results" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultados-busqueda">
+                        <!-- Resultados de búsqueda dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla para el producto seleccionado -->
+            <div id="contenedor-productos" class="mt-3" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Total</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla">
+                        <tr>
+                            <td><img id="selected-product-img" src="" width="50" height="50"></td>
+                            <td id="selected-product-name"></td>
+                            <td id="selected-product-price"></td>
+                            <td><input type="number" name="cantidad" id="producto-cantidad" class="form-control" min="1" value="1" required></td>
+                            <td id="producto-total">0.00</td>
+                            <td><button type="button" class="btn btn-danger btn-sm" onclick="deseleccionarProducto()">✕</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_contenido"><strong>Contenido de la orden (máx 39 letras)</strong></label>
+            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="39">
+        </div>
+
+        <!-- Estado oculto -->
+        <input type="hidden" name="estado" value="pendiente">
+    </div>
+
+  
+</form>
+  <!-- Botones -->
+    <div class="form-actions text-right mt-4">
+        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para validar el formulario
+    function validarFormulario() {
+        let isValid = true;
+        const requiredFields = [
+            {id: 'id_cliente_nombre', name: 'cliente_nombre'},
+            {id: 'id_cliente_telefono', name: 'cliente_telefono'},
+            {id: 'id_cliente_ciudad', name: 'cliente_ciudad'},
+            {id: 'id_cliente_direccion', name: 'cliente_direccion'},
+            {id: 'id_producto', name: 'producto'},
+            {id: 'producto-cantidad', name: 'cantidad'}
+        ];
+
+        requiredFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                if (element) {
+                    element.classList.add('is-invalid');
+                    
+                    if (!element.nextElementSibling || !element.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Este campo es requerido.';
+                        element.parentNode.insertBefore(errorDiv, element.nextSibling);
+                    }
+                }
+            } else if (element) {
+                element.classList.remove('is-invalid');
+                const errorDiv = element.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+
+        return isValid;
+    }
+
+    // Manejador del botón de guardar
+    document.getElementById('submitBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (validarFormulario()) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Enviar el formulario
+            document.getElementById('miFormulario').submit();
+        } else {
+            alert('Por favor complete todos los campos requeridos.');
+        }
+    });
+
+    // Resto del código para la búsqueda de productos
+    const searchInput = document.getElementById('busqueda-producto');
+    const resultsContainer = document.getElementById('producto-results');
+    const resultadosBusqueda = document.getElementById('resultados-busqueda');
+    const productoIdInput = document.getElementById('id_producto');
+    const contenedorProductos = document.getElementById('contenedor-productos');
+    const cantidadInput = document.getElementById('producto-cantidad');
+
+    // Función para buscar productos
+    function searchProductos(query) {
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    resultadosBusqueda.innerHTML = '';
+                    data.forEach(producto => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
+                             onerror="this.src='https://via.placeholder.com/50'"></td>
+                        <td>${producto.nombre}</td>
+                        <td>$${producto.precio}</td>
+                        <td><button class="btn btn-sm btn-primary" 
+                            onclick="seleccionarProducto(${producto.id}, '${producto.nombre.replace("'", "\\'")}', 
+                            '${producto.imagen || 'https://via.placeholder.com/50'}', ${producto.precio})">
+                            Seleccionar
+                        </button></td>
+                    `;
+                        resultadosBusqueda.appendChild(row);
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.style.display = 'none';
+                }
+            });
+    }
+
+    // Función para calcular el total
+    function calcularTotal() {
+        const precio = parseFloat(document.getElementById('selected-product-price').textContent.replace('$', '')) || 0;
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        const total = precio * cantidad;
+        document.getElementById('producto-total').textContent = total.toFixed(2);
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', function() {
+        searchProductos(this.value);
+    });
+
+    cantidadInput.addEventListener('input', calcularTotal);
+
+    // Ocultar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Si ya hay un producto seleccionado (en caso de edición)
+    {% if form.producto.value %}
+    fetch(`/api/productos/{{ form.producto.value }}/`)
+        .then(response => response.json())
+        .then(producto => {
+            if (producto) {
+                seleccionarProducto(producto.id, producto.nombre,
+                    producto.imagen || 'https://via.placeholder.com/50',
+                    producto.precio);
+                // Si hay cantidad guardada, establecerla
+                {% if form.cantidad.value %}
+                document.getElementById('producto-cantidad').value = {{ form.cantidad.value }};
+                calcularTotal();
+                {% endif %}
+            }
+        });
+    {% endif %}
+});
+
+// Funciones globales
+function seleccionarProducto(id, nombre, imagen, precio) {
+    document.getElementById('id_producto').value = id;
+    document.getElementById('busqueda-producto').value = nombre;
+
+    document.getElementById('selected-product-img').src = imagen;
+    document.getElementById('selected-product-name').textContent = nombre;
+    document.getElementById('selected-product-price').textContent = `$${precio}`;
+    document.getElementById('contenedor-productos').style.display = 'block';
+
+    calcularTotal();
+    document.getElementById('producto-results').style.display = 'none';
+}
+
+function deseleccionarProducto() {
+    document.getElementById('id_producto').value = '';
+    document.getElementById('busqueda-producto').value = '';
+    document.getElementById('contenedor-productos').style.display = 'none';
+}
+
+function calcularTotal() {
+    const precio = parseFloat(document.getElementById('selected-product-price').textContent.replace('$', '')) || 0;
+    const cantidad = parseInt(document.getElementById('producto-cantidad').value) || 0;
+    const total = precio * cantidad;
+    document.getElementById('producto-total').textContent = total.toFixed(2);
+}
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+///////////////
+
 {% extends 'base.html' %}
 
 {% block title %}Crear Guía de Envío{% endblock %}
@@ -405,5 +1128,1412 @@
       }
     });
   });
+</script>
+{% endblock %}
+
+
+{% extends 'base.html' %}
+
+{% block title %}Guías de Envío - HOKO{% endblock %}
+
+{% block content %}
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<div class="products-container">
+    <h1>Guías de Envío</h1>
+
+    <!-- Barra de acciones -->
+    <div class="products-actions">
+        <form method="get" id="search-form" class="search-form">
+            <input type="text" name="search" id="search-input" 
+                   placeholder="Buscar por ID, código, cliente, producto..." 
+                   class="search-form-input" 
+                   value="{{ request.GET.search }}">
+            <button type="submit" class="btn search-form-btn">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+        </form>
+
+        <div class="action-buttons">
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+                <i class="fas fa-sync-alt"></i> Limpiar
+            </a>
+            <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
+            <button class="exportar">⬇ Exportar como TXT</button>
+            <button class="exportarExcel">⬇ Exportar como Excel</button>
+            <button class="exportarPdf">⬇ Exportar como PDF</button>
+        </div>
+    </div>
+    
+    <!-- Tabla de guías -->
+    <div class="table-wrapper">
+        <table class="products-table" id="guias-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Cliente</th>
+                    <th>Ciudad</th>
+                    <th>Producto</th>
+                    <th>Estado</th>
+                    <th>Creación</th>
+                    <th>Modificación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guia in guias %}
+                <tr>
+                    <td>{{ guia.id }}</td>
+                    <td>{{ guia.codigo_seguimiento }}</td>
+                    <td>{{ guia.cliente_nombre }}</td>
+                    <td>{{ guia.cliente_ciudad }}</td>
+                    <td>{{ guia.producto.nombre }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if guia.estado == 'entregado' %}badge-success
+                            {% elif guia.estado == 'cancelado' %}badge-danger
+                            {% else %}badge-warning{% endif %}">
+                            {{ guia.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
+                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
+                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center">No hay guías registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener todos los elementos necesarios
+    const searchInput = document.getElementById('search-input');
+    const tableRows = document.querySelectorAll('#guias-table tbody tr');
+    const filterStatus = document.getElementById('filter-status');
+    const filterCiudad = document.getElementById('filter-ciudad');
+    const exportTxtBtn = document.querySelector('.exportar');
+    const exportExcelBtn = document.querySelector('.exportarExcel');
+    const exportPdfBtn = document.querySelector('.exportarPdf');
+
+    // Función para aplicar todos los filtros
+    function applyFilters() {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        const statusValue = filterStatus.value;
+        const ciudadValue = filterCiudad.value.toLowerCase();
+
+        tableRows.forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+            const rowStatus = row.dataset.estado;
+            const rowCiudad = row.dataset.ciudad;
+
+            // Verificar coincidencias con cada filtro
+            const searchMatch = !searchTerm || rowText.includes(searchTerm);
+            const statusMatch = !statusValue || rowStatus === statusValue;
+            const ciudadMatch = !ciudadValue || rowCiudad.includes(ciudadValue);
+
+            // Mostrar u ocultar fila según los filtros
+            row.style.display = (searchMatch && statusMatch && ciudadMatch) ? '' : 'none';
+        });
+    }
+
+    // Event listeners para los filtros
+    searchInput.addEventListener('input', applyFilters);
+    filterStatus.addEventListener('change', applyFilters);
+    filterCiudad.addEventListener('change', applyFilters);
+
+    // Función para obtener datos visibles
+    function obtenerDatosVisibles() {
+        const datos = [];
+        document.querySelectorAll('#guias-table tbody tr').forEach(row => {
+            if (row.style.display !== 'none') {
+                const celdas = row.querySelectorAll('td');
+                datos.push({
+                    ID: celdas[1].textContent.trim(),
+                    Código: celdas[2].textContent.trim(),
+                    Cliente: celdas[3].textContent.trim(),
+                    Ciudad: celdas[4].textContent.trim(),
+                    Producto: celdas[5].textContent.trim(),
+                    Estado: celdas[6].textContent.trim(),
+                    Creación: celdas[7].textContent.trim(),
+                    Modificación: celdas[8].textContent.trim()
+                });
+            }
+        });
+        return datos;
+    }
+
+    // Exportar a TXT
+    exportTxtBtn.addEventListener('click', function() {
+        const datos = obtenerDatosVisibles();
+        let contenido = 'ID\tCódigo\tCliente\tCiudad\tProducto\tEstado\tCreación\tModificación\n';
+        
+        datos.forEach(item => {
+            contenido += `${item.ID}\t${item.Código}\t${item.Cliente}\t${item.Ciudad}\t` +
+                        `${item.Producto}\t${item.Estado}\t${item.Creación}\t${item.Modificación}\n`;
+        });
+
+        const blob = new Blob([contenido], {type: 'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `guias_exportadas_${new Date().toISOString().slice(0,10)}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Exportar a Excel
+    exportExcelBtn.addEventListener('click', function() {
+        try {
+            const datos = obtenerDatosVisibles();
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(datos);
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Guías");
+            XLSX.writeFile(workbook, `guias_exportadas_${new Date().toISOString().slice(0,10)}.xlsx`);
+        } catch (error) {
+            console.error("Error al exportar a Excel:", error);
+            alert("Ocurrió un error al exportar a Excel. Por favor revisa la consola para más detalles.");
+        }
+    });
+
+    // Exportar a PDF
+    exportPdfBtn.addEventListener('click', function() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const datos = obtenerDatosVisibles();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Reporte de Guías de Envío', 105, 15, {align: 'center'});
+            
+            // Encabezados
+            const headers = [
+                "ID",
+                "Código",
+                "Cliente",
+                "Ciudad",
+                "Producto",
+                "Estado",
+                "Creación",
+                "Modificación"
+            ];
+            
+            // Datos
+            const rows = datos.map(item => [
+                item.ID,
+                item.Código,
+                item.Cliente,
+                item.Ciudad,
+                item.Producto,
+                item.Estado,
+                item.Creación,
+                item.Modificación
+            ]);
+            
+            // Generar tabla
+            doc.autoTable({
+                startY: 25,
+                head: [headers],
+                body: rows,
+                margin: {top: 20},
+                styles: {fontSize: 8, cellPadding: 1.5},
+                headStyles: {fillColor: [22, 160, 133]}
+            });
+            
+            // Guardar
+            doc.save(`guias_exportadas_${new Date().toISOString().slice(0,10)}.pdf`);
+        } catch (error) {
+            console.error("Error al exportar a PDF:", error);
+            alert("Ocurrió un error al exportar a PDF. Por favor revisa la consola para más detalles.");
+        }
+    });
+
+    // Aplicar filtros al cargar la página
+    applyFilters();
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+promero si
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+    {% csrf_token %}
+
+    <!-- Columna Izquierda: Información Personal -->
+    <div class="personal-section">
+        <div class="form-group">
+            <label for="id_cliente_nombre">Nombre completo *</label>
+            <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+            {% if form.cliente_nombre.errors %}
+                <div class="invalid-feedback">{{ form.cliente_nombre.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_telefono">Teléfono *</label>
+            <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+            {% if form.cliente_telefono.errors %}
+                <div class="invalid-feedback">{{ form.cliente_telefono.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_ciudad">Ciudad *</label>
+            <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                {% for value, label in form.fields.cliente_ciudad.choices %}
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if form.cliente_ciudad.errors %}
+                <div class="invalid-feedback">{{ form.cliente_ciudad.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion">Dirección *</label>
+            <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+            {% if form.cliente_direccion.errors %}
+                <div class="invalid-feedback">{{ form.cliente_direccion.errors.as_text }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_cliente_direccion2">Dirección secundaria</label>
+            <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
+        </div>
+    </div>
+
+    <!-- Línea separadora entre columnas -->
+    <div class="separador"></div>
+    <div class="linea-horizontal"></div>
+
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+        <div class="form-group">
+            <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+            <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
+            <input type="hidden" name="producto" id="id_producto" required>
+
+            <!-- Contenedor para mostrar los resultados de búsqueda -->
+            <div id="producto-results" class="dropdown-results" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultados-busqueda">
+                        <!-- Resultados de búsqueda dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla para el producto seleccionado -->
+            <div id="contenedor-productos" class="mt-3" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Total</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla">
+                        <tr>
+                            <td><img id="selected-product-img" src="" width="50" height="50"></td>
+                            <td id="selected-product-name"></td>
+                            <td id="selected-product-price"></td>
+                            <td><input type="number" name="cantidad" id="producto-cantidad" class="form-control" min="1" value="1" required></td>
+                            <td id="producto-total">0.00</td>
+                            <td><button type="button" class="btn btn-danger btn-sm" onclick="deseleccionarProducto()">✕</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_contenido"><strong>Contenido de la orden (máx 39 letras)</strong></label>
+            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="39">
+        </div>
+
+        <!-- Estado oculto -->
+        <input type="hidden" name="estado" value="pendiente">
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions text-right mt-4">
+        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para validar el formulario
+    function validarFormulario() {
+        let isValid = true;
+        const requiredFields = [
+            {id: 'id_cliente_nombre', name: 'cliente_nombre'},
+            {id: 'id_cliente_telefono', name: 'cliente_telefono'},
+            {id: 'id_cliente_ciudad', name: 'cliente_ciudad'},
+            {id: 'id_cliente_direccion', name: 'cliente_direccion'},
+            {id: 'id_producto', name: 'producto'},
+            {id: 'producto-cantidad', name: 'cantidad'}
+        ];
+
+        requiredFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                if (element) {
+                    element.classList.add('is-invalid');
+                    
+                    if (!element.nextElementSibling || !element.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Este campo es requerido.';
+                        element.parentNode.insertBefore(errorDiv, element.nextSibling);
+                    }
+                }
+            } else if (element) {
+                element.classList.remove('is-invalid');
+                const errorDiv = element.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+
+        return isValid;
+    }
+
+    // Manejador del botón de guardar
+    document.getElementById('submitBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (validarFormulario()) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Enviar el formulario
+            document.getElementById('miFormulario').submit();
+        } else {
+            alert('Por favor complete todos los campos requeridos.');
+        }
+    });
+
+    // Resto del código para la búsqueda de productos
+    const searchInput = document.getElementById('busqueda-producto');
+    const resultsContainer = document.getElementById('producto-results');
+    const resultadosBusqueda = document.getElementById('resultados-busqueda');
+    const productoIdInput = document.getElementById('id_producto');
+    const contenedorProductos = document.getElementById('contenedor-productos');
+    const cantidadInput = document.getElementById('producto-cantidad');
+
+    // Función para buscar productos
+    function searchProductos(query) {
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    resultadosBusqueda.innerHTML = '';
+                    data.forEach(producto => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
+                             onerror="this.src='https://via.placeholder.com/50'"></td>
+                        <td>${producto.nombre}</td>
+                        <td>$${producto.precio}</td>
+                        <td><button class="btn btn-sm btn-primary" 
+                            onclick="seleccionarProducto(${producto.id}, '${producto.nombre.replace("'", "\\'")}', 
+                            '${producto.imagen || 'https://via.placeholder.com/50'}', ${producto.precio})">
+                            Seleccionar
+                        </button></td>
+                    `;
+                        resultadosBusqueda.appendChild(row);
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.style.display = 'none';
+                }
+            });
+    }
+
+    // Función para calcular el total
+    function calcularTotal() {
+        const precio = parseFloat(document.getElementById('selected-product-price').textContent.replace('$', '')) || 0;
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        const total = precio * cantidad;
+        document.getElementById('producto-total').textContent = total.toFixed(2);
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', function() {
+        searchProductos(this.value);
+    });
+
+    cantidadInput.addEventListener('input', calcularTotal);
+
+    // Ocultar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Si ya hay un producto seleccionado (en caso de edición)
+    {% if form.producto.value %}
+    fetch(`/api/productos/{{ form.producto.value }}/`)
+        .then(response => response.json())
+        .then(producto => {
+            if (producto) {
+                seleccionarProducto(producto.id, producto.nombre,
+                    producto.imagen || 'https://via.placeholder.com/50',
+                    producto.precio);
+                // Si hay cantidad guardada, establecerla
+                {% if form.cantidad.value %}
+                document.getElementById('producto-cantidad').value = {{ form.cantidad.value }};
+                calcularTotal();
+                {% endif %}
+            }
+        });
+    {% endif %}
+});
+
+// Funciones globales
+function seleccionarProducto(id, nombre, imagen, precio) {
+    document.getElementById('id_producto').value = id;
+    document.getElementById('busqueda-producto').value = nombre;
+
+    document.getElementById('selected-product-img').src = imagen;
+    document.getElementById('selected-product-name').textContent = nombre;
+    document.getElementById('selected-product-price').textContent = `$${precio}`;
+    document.getElementById('contenedor-productos').style.display = 'block';
+
+    calcularTotal();
+    document.getElementById('producto-results').style.display = 'none';
+}
+
+function deseleccionarProducto() {
+    document.getElementById('id_producto').value = '';
+    document.getElementById('busqueda-producto').value = '';
+    document.getElementById('contenedor-productos').style.display = 'none';
+}
+
+function calcularTotal() {
+    const precio = parseFloat(document.getElementById('selected-product-price').textContent.replace('$', '')) || 0;
+    const cantidad = parseInt(document.getElementById('producto-cantidad').value) || 0;
+    const total = precio * cantidad;
+    document.getElementById('producto-total').textContent = total.toFixed(2);
+}
+</script>
+{% endblock %}
+
+
+segundo si
+
+
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+    {% csrf_token %}
+
+    <!-- Columna Izquierda: Información Personal -->
+    <div class="personal-section">
+        <div class="form-group">
+            <label for="id_cliente_nombre">Nombre completo *</label>
+            <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+            {% if form.cliente_nombre.errors %}
+                <div class="invalid-feedback">{{ form.cliente_nombre.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_telefono">Teléfono *</label>
+            <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+            {% if form.cliente_telefono.errors %}
+                <div class="invalid-feedback">{{ form.cliente_telefono.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_ciudad">Ciudad *</label>
+            <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                {% for value, label in form.fields.cliente_ciudad.choices %}
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if form.cliente_ciudad.errors %}
+                <div class="invalid-feedback">{{ form.cliente_ciudad.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion">Dirección *</label>
+            <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+            {% if form.cliente_direccion.errors %}
+                <div class="invalid-feedback">{{ form.cliente_direccion.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion2">Dirección secundaria</label>
+            <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
+        </div>
+    </div>
+
+    <!-- Línea separadora entre columnas -->
+    <div class="separador"></div>
+    <div class="linea-horizontal"></div>
+
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+        <div class="form-group">
+            <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+            <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
+            
+            <!-- Contenedor para mostrar los resultados de búsqueda -->
+            <div id="producto-results" class="dropdown-results" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultados-busqueda">
+                        <!-- Resultados de búsqueda dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla para productos seleccionados -->
+            <div id="contenedor-productos" class="mt-3">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productos-seleccionados">
+                        <!-- Productos seleccionados aparecerán aquí -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                            <td id="total-compra">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_contenido"><strong>Contenido de la orden</strong></label>
+            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="500" readonly>
+            <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados</small>
+        </div>
+ 
+        <!-- Estado oculto -->
+        <input type="hidden" name="estado" value="pendiente">
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions text-right mt-4">
+        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+</form>
+
+<style>
+    /* Estilo para las imágenes de productos */
+    .img-producto {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+    }
+    
+    /* Estilo para campos inválidos */
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.875em;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Array para almacenar productos seleccionados
+    let productosSeleccionados = [];
+    
+    // Función para validar el formulario
+    function validarFormulario() {
+        let isValid = true;
+        const requiredFields = [
+            {id: 'id_cliente_nombre', name: 'cliente_nombre'},
+            {id: 'id_cliente_telefono', name: 'cliente_telefono'},
+            {id: 'id_cliente_ciudad', name: 'cliente_ciudad'},
+            {id: 'id_cliente_direccion', name: 'cliente_direccion'}
+        ];
+
+        // Validar campos requeridos
+        requiredFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                if (element) {
+                    element.classList.add('is-invalid');
+                    
+                    if (!element.nextElementSibling || !element.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Este campo es requerido.';
+                        element.parentNode.insertBefore(errorDiv, element.nextSibling);
+                    }
+                }
+            } else if (element) {
+                element.classList.remove('is-invalid');
+                const errorDiv = element.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+
+        // Validar que haya al menos un producto seleccionado
+        if (productosSeleccionados.length === 0) {
+            isValid = false;
+            alert('Debe agregar al menos un producto');
+        }
+
+        return isValid;
+    }
+
+    // Manejador del botón de guardar
+    document.getElementById('submitBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (validarFormulario()) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Enviar el formulario
+            document.getElementById('miFormulario').submit();
+        }
+    });
+
+    // Función para generar el contenido de la orden
+    function generarContenidoOrden() {
+        let contenido = '';
+        const maxCaracteres = 500;
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const item = `${producto.cantidad}- ${producto.nombre}`;
+            
+            if (index > 0) {
+                // Verificar si al agregar este item superamos el límite
+                if ((contenido.length + item.length + 2) <= maxCaracteres) {
+                    contenido += ', ' + item;
+                } else {
+                    // Si supera el límite, truncar y salir del bucle
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            } else {
+                contenido = item;
+                
+                // Verificar si solo este item supera el límite
+                if (contenido.length > maxCaracteres) {
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            }
+        });
+        
+        document.getElementById('id_contenido').value = contenido;
+    }
+    
+    // Función para actualizar el total
+    function actualizarTotal() {
+        let total = 0;
+        productosSeleccionados.forEach(producto => {
+            total += producto.precio * producto.cantidad;
+        });
+        document.getElementById('total-compra').textContent = total.toFixed(2);
+        generarContenidoOrden();
+    }
+
+    // Función para renderizar la tabla de productos
+    function renderizarProductos() {
+        const tbody = document.getElementById('productos-seleccionados');
+        tbody.innerHTML = '';
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const subtotal = producto.precio * producto.cantidad;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${producto.imagen}" class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                <td>${producto.nombre}</td>
+                <td>$${producto.precio.toFixed(2)}</td>
+                <td>
+                    <input type="number" name="productos[${index}][cantidad]" 
+                           class="form-control cantidad-producto" 
+                           min="1" value="${producto.cantidad}" 
+                           data-index="${index}"
+                           style="width: 70px;">
+                </td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm btn-eliminar" 
+                            data-index="${index}">✕</button>
+                </td>
+                <input type="hidden" name="productos[${index}][id]" value="${producto.id}">
+                <input type="hidden" name="productos[${index}][nombre]" value="${producto.nombre}">
+                <input type="hidden" name="productos[${index}][precio]" value="${producto.precio}">
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Agregar event listeners a los nuevos elementos
+        document.querySelectorAll('.cantidad-producto').forEach(input => {
+            input.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                const nuevaCantidad = parseInt(this.value) || 1;
+                productosSeleccionados[index].cantidad = nuevaCantidad;
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                productosSeleccionados.splice(index, 1);
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        actualizarTotal();
+    }
+
+    // Función para agregar producto
+    function agregarProducto(id, nombre, imagen, precio) {
+        // Verificar si el producto ya existe
+        const existe = productosSeleccionados.some(p => p.id === id);
+        
+        if (!existe) {
+            productosSeleccionados.push({
+                id: id,
+                nombre: nombre,
+                imagen: imagen || 'https://via.placeholder.com/50',
+                precio: parseFloat(precio),
+                cantidad: 1
+            });
+            
+            renderizarProductos();
+        } else {
+            alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
+        }
+    }
+
+    // Función para buscar productos
+    function searchProductos(query) {
+        if (query.length < 2) {
+            document.getElementById('producto-results').style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultadosBusqueda = document.getElementById('resultados-busqueda');
+                resultadosBusqueda.innerHTML = '';
+                
+                if (data.length > 0) {
+                    data.forEach(producto => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
+                                 class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                            <td>${producto.nombre}</td>
+                            <td>$${producto.precio}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary btn-agregar" 
+                                    data-id="${producto.id}"
+                                    data-nombre="${producto.nombre.replace(/"/g, '&quot;')}"
+                                    data-imagen="${producto.imagen || 'https://via.placeholder.com/50'}"
+                                    data-precio="${producto.precio}">
+                                    Agregar
+                                </button>
+                            </td>
+                        `;
+                        resultadosBusqueda.appendChild(row);
+                    });
+                    
+                    // Agregar event listeners a los botones de agregar
+                    document.querySelectorAll('.btn-agregar').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            agregarProducto(
+                                this.dataset.id,
+                                this.dataset.nombre,
+                                this.dataset.imagen,
+                                this.dataset.precio
+                            );
+                            document.getElementById('producto-results').style.display = 'none';
+                            document.getElementById('busqueda-producto').value = '';
+                        });
+                    });
+                    
+                    document.getElementById('producto-results').style.display = 'block';
+                } else {
+                    document.getElementById('producto-results').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar productos:', error);
+                document.getElementById('producto-results').style.display = 'none';
+            });
+    }
+
+    // Event listeners
+    document.getElementById('busqueda-producto').addEventListener('input', function() {
+        searchProductos(this.value);
+    });
+
+    // Ocultar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#producto-results') && !e.target.closest('#busqueda-producto')) {
+            document.getElementById('producto-results').style.display = 'none';
+        }
+    });
+
+    // Precargar productos si estamos editando
+    {% if form.productos.value %}
+        {% for producto in form.productos.value %}
+            agregarProducto(
+                {{ producto.id }}, 
+                '{{ producto.nombre|escapejs }}', 
+                '{{ producto.imagen|default:"https://via.placeholder.com/50" }}', 
+                {{ producto.precio }}
+            );
+        {% endfor %}
+        renderizarProductos();
+    {% endif %}
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+////
+{% extends 'base.html' %}
+
+{% block title %}Crear Guía de Envío{% endblock %}
+
+{% block content %}
+<h1>Crear Guía de Envío</h1>
+
+<form method="post" class="form-container" id="miFormulario">
+    {% csrf_token %}
+
+    <!-- Columna Izquierda: Información Personal -->
+    <div class="personal-section">
+        <div class="form-group">
+            <label for="id_cliente_nombre">Nombre completo *</label>
+            <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+            {% if form.cliente_nombre.errors %}
+                <div class="invalid-feedback">{{ form.cliente_nombre.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_telefono">Teléfono *</label>
+            <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+            {% if form.cliente_telefono.errors %}
+                <div class="invalid-feedback">{{ form.cliente_telefono.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_ciudad">Ciudad *</label>
+            <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                {% for value, label in form.fields.cliente_ciudad.choices %}
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if form.cliente_ciudad.errors %}
+                <div class="invalid-feedback">{{ form.cliente_ciudad.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion">Dirección *</label>
+            <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+            {% if form.cliente_direccion.errors %}
+                <div class="invalid-feedback">{{ form.cliente_direccion.errors.as_text }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_cliente_direccion2">Dirección secundaria</label>
+            <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
+        </div>
+    </div>
+
+    <!-- Línea separadora entre columnas -->
+    <div class="separador"></div>
+    <div class="linea-horizontal"></div>
+
+    <!-- Columna Derecha: Selección de Producto y Orden -->
+    <div class="right-section">
+        <div class="form-group">
+            <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+            <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
+            
+            <!-- Contenedor para mostrar los resultados de búsqueda -->
+            <div id="producto-results" class="dropdown-results" style="display: none;">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultados-busqueda">
+                        <!-- Resultados de búsqueda dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla para productos seleccionados -->
+            <div id="contenedor-productos" class="mt-3">
+                <table class="tabla-rosada">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productos-seleccionados">
+                        <!-- Productos seleccionados aparecerán aquí -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                            <td id="total-compra">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_contenido"><strong>Contenido de la orden</strong></label>
+            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="500" readonly>
+            <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados</small>
+        </div>
+
+        <div class="form-group">
+            <label for="id_observaciones">Observaciones</label>
+            <textarea name="observaciones" id="id_observaciones" class="form-control">{{ form.observaciones.value|default:'' }}</textarea>
+        </div>
+ 
+        <!-- Estado oculto -->
+        <input type="hidden" name="estado" value="pendiente">
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions text-right mt-4">
+        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+</form>
+
+<style>
+    /* Estilo para las imágenes de productos */
+    .img-producto {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+    }
+    
+    /* Estilo para campos inválidos */
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.875em;
+    }
+    
+    /* Estilo para la tabla de productos */
+    .tabla-rosada {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .tabla-rosada th, .tabla-rosada td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .tabla-rosada th {
+        background-color: #f8d7da;
+        text-align: left;
+    }
+    
+    .dropdown-results {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Array para almacenar productos seleccionados
+    let productosSeleccionados = [];
+    
+    // Función para validar el formulario
+    function validarFormulario() {
+        let isValid = true;
+        const requiredFields = [
+            {id: 'id_cliente_nombre', name: 'cliente_nombre'},
+            {id: 'id_cliente_telefono', name: 'cliente_telefono'},
+            {id: 'id_cliente_ciudad', name: 'cliente_ciudad'},
+            {id: 'id_cliente_direccion', name: 'cliente_direccion'}
+        ];
+
+        // Validar campos requeridos
+        requiredFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                if (element) {
+                    element.classList.add('is-invalid');
+                    
+                    if (!element.nextElementSibling || !element.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'Este campo es requerido.';
+                        element.parentNode.insertBefore(errorDiv, element.nextSibling);
+                    }
+                }
+            } else if (element) {
+                element.classList.remove('is-invalid');
+                const errorDiv = element.nextElementSibling;
+                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                    errorDiv.remove();
+                }
+            }
+        });
+
+        // Validar que haya al menos un producto seleccionado
+        if (productosSeleccionados.length === 0) {
+            isValid = false;
+            alert('Debe agregar al menos un producto');
+        }
+
+        return isValid;
+    }
+
+    // Manejador del botón de guardar
+    document.getElementById('submitBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (validarFormulario()) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Enviar el formulario
+            document.getElementById('miFormulario').submit();
+        }
+    });
+
+    // Función para generar el contenido de la orden
+    function generarContenidoOrden() {
+        let contenido = '';
+        const maxCaracteres = 500;
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const item = `${producto.cantidad}x ${producto.nombre}`;
+            
+            if (index > 0) {
+                // Verificar si al agregar este item superamos el límite
+                if ((contenido.length + item.length + 2) <= maxCaracteres) {
+                    contenido += ', ' + item;
+                } else {
+                    // Si supera el límite, truncar y salir del bucle
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            } else {
+                contenido = item;
+                
+                // Verificar si solo este item supera el límite
+                if (contenido.length > maxCaracteres) {
+                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
+                    return false;
+                }
+            }
+        });
+        
+        document.getElementById('id_contenido').value = contenido;
+    }
+    
+    // Función para actualizar el total
+    function actualizarTotal() {
+        let total = 0;
+        productosSeleccionados.forEach(producto => {
+            total += producto.precio * producto.cantidad;
+        });
+        document.getElementById('total-compra').textContent = total.toFixed(2);
+        generarContenidoOrden();
+    }
+
+    // Función para renderizar la tabla de productos
+    function renderizarProductos() {
+        const tbody = document.getElementById('productos-seleccionados');
+        tbody.innerHTML = '';
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const subtotal = producto.precio * producto.cantidad;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${producto.imagen}" class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                <td>${producto.nombre}</td>
+                <td>$${producto.precio.toFixed(2)}</td>
+                <td>
+                    <input type="number" name="productos[${index}][cantidad]" 
+                           class="form-control cantidad-producto" 
+                           min="1" value="${producto.cantidad}" 
+                           data-index="${index}"
+                           style="width: 70px;">
+                </td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm btn-eliminar" 
+                            data-index="${index}">✕</button>
+                </td>
+                <input type="hidden" name="productos[${index}][id]" value="${producto.id}">
+                <input type="hidden" name="productos[${index}][nombre]" value="${producto.nombre}">
+                <input type="hidden" name="productos[${index}][precio]" value="${producto.precio}">
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Agregar event listeners a los nuevos elementos
+        document.querySelectorAll('.cantidad-producto').forEach(input => {
+            input.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                const nuevaCantidad = parseInt(this.value) || 1;
+                productosSeleccionados[index].cantidad = nuevaCantidad;
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                productosSeleccionados.splice(index, 1);
+                renderizarProductos();
+                actualizarTotal();
+            });
+        });
+        
+        actualizarTotal();
+    }
+
+    // Función para agregar producto
+    function agregarProducto(id, nombre, imagen, precio) {
+        // Verificar si el producto ya existe
+        const existe = productosSeleccionados.some(p => p.id === id);
+        
+        if (!existe) {
+            productosSeleccionados.push({
+                id: id,
+                nombre: nombre,
+                imagen: imagen || 'https://via.placeholder.com/50',
+                precio: parseFloat(precio),
+                cantidad: 1
+            });
+            
+            renderizarProductos();
+        } else {
+            alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
+        }
+    }
+
+    // Función para buscar productos
+    function searchProductos(query) {
+        if (query.length < 2) {
+            document.getElementById('producto-results').style.display = 'none';
+            return;
+        }
+
+        fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultadosBusqueda = document.getElementById('resultados-busqueda');
+                resultadosBusqueda.innerHTML = '';
+                
+                if (data.length > 0) {
+                    data.forEach(producto => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
+                                 class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                            <td>${producto.nombre}</td>
+                            <td>$${producto.precio}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary btn-agregar" 
+                                    data-id="${producto.id}"
+                                    data-nombre="${producto.nombre.replace(/"/g, '&quot;')}"
+                                    data-imagen="${producto.imagen || 'https://via.placeholder.com/50'}"
+                                    data-precio="${producto.precio}">
+                                    Agregar
+                                </button>
+                            </td>
+                        `;
+                        resultadosBusqueda.appendChild(row);
+                    });
+                    
+                    // Agregar event listeners a los botones de agregar
+                    document.querySelectorAll('.btn-agregar').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            agregarProducto(
+                                this.dataset.id,
+                                this.dataset.nombre,
+                                this.dataset.imagen,
+                                this.dataset.precio
+                            );
+                            document.getElementById('producto-results').style.display = 'none';
+                            document.getElementById('busqueda-producto').value = '';
+                        });
+                    });
+                    
+                    document.getElementById('producto-results').style.display = 'block';
+                } else {
+                    document.getElementById('producto-results').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar productos:', error);
+                document.getElementById('producto-results').style.display = 'none';
+            });
+    }
+
+    // Event listeners
+    document.getElementById('busqueda-producto').addEventListener('input', function() {
+        searchProductos(this.value);
+    });
+
+    // Ocultar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#producto-results') && !e.target.closest('#busqueda-producto')) {
+            document.getElementById('producto-results').style.display = 'none';
+        }
+    });
+
+    // Precargar productos si estamos editando
+    {% if form.productos.value %}
+        {% for producto in form.productos.value %}
+            agregarProducto(
+                {{ producto.id }}, 
+                '{{ producto.nombre|escapejs }}', 
+                '{{ producto.imagen|default:"https://via.placeholder.com/50" }}', 
+                {{ producto.precio }}
+            );
+        {% endfor %}
+        renderizarProductos();
+    {% endif %}
+});
 </script>
 {% endblock %}

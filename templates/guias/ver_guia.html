@@ -3,81 +3,60 @@
 {% block title %}Guía #{{ guia.id }} - HOKO{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-lg rounded">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="mb-0">Guía #{{ guia.id }}</h3>
-            <span class="badge badge-{% if guia.estado == 'entregado' %}success
-                                      {% elif guia.estado == 'cancelado' %}danger
-                                      {% else %}warning{% endif %}">
-                {{ guia.get_estado_display }}
-            </span>
-        </div>
 
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h5>Información del Cliente</h5>
-                    <p><strong>Nombre:</strong> {{ guia.cliente_nombre }}</p>
-                    <p><strong>Teléfono:</strong> {{ guia.cliente_telefono }}</p>
-                    <p><strong>Ciudad:</strong> {{ guia.cliente_ciudad }}</p>
-                    <p><strong>Dirección:</strong> {{ guia.cliente_direccion }}</p>
-                    {% if guia.cliente_direccion2 %}
-                    <p><strong>Dirección secundaria:</strong> {{ guia.cliente_direccion2 }}</p>
-                    {% endif %}
-                </div>
+<h1>Guía de Envío #{{ guia.id }}</h1>
 
-                <div class="col-md-6">
-                    <h5>Información del Envío</h5>
-                    <p><strong>Código de seguimiento:</strong> {{ guia.codigo_seguimiento }}</p>
-                    <p><strong>Fecha creación:</strong> {{ guia.fecha_creacion|date:"d/m/Y H:i" }}</p>
-                    <p><strong>Última actualización:</strong> {{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <h5>Detalles del Producto</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Cantidad</th>
-                                    <th>Contenido</th>
-                                    <th>Observaciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ guia.producto.nombre }}</td>
-                                    <td>{{ guia.cantidad }}</td>
-                                    <td>{{ guia.contenido|default:"-" }}</td>
-                                    <td>{{ guia.observaciones|default:"-" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-       
+<div class="row">
+    <div class="col-md-6">
+        <h3>Información del Cliente</h3>
+        <p><strong>Nombre:</strong> {{ guia.cliente_nombre }}</p>
+        <p><strong>Teléfono:</strong> {{ guia.cliente_telefono }}</p>
+        <p><strong>Ciudad:</strong> {{ guia.get_cliente_ciudad_display }}</p>
+        <p><strong>Dirección:</strong> {{ guia.cliente_direccion }}</p>
+        {% if guia.cliente_direccion2 %}
+        <p><strong>Dirección secundaria:</strong> {{ guia.cliente_direccion2 }}</p>
+        {% endif %}
     </div>
-    <div class="card-footer text-right">
-        <div class="btn-group">
-            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Volver
-            </a>
-            <a href="{% url 'editar_guia' guia.id %}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Editar
-            </a>
-            <a href="{% url 'eliminar_guia' guia.id %}" class="btn btn-danger">
-                <i class="fas fa-trash"></i> Eliminar
-            </a>
-        </div>
+    
+    <div class="col-md-6">
+        <h3>Detalles del Envío</h3>
+        <p><strong>Código de seguimiento:</strong> {{ guia.codigo_seguimiento }}</p>
+        <p><strong>Estado:</strong> {{ guia.get_estado_display }}</p>
+        <p><strong>Fecha creación:</strong> {{ guia.fecha_creacion }}</p>
+        <p><strong>Última actualización:</strong> {{ guia.fecha_actualizacion }}</p>
     </div>
 </div>
+
+<h3>Productos</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Precio Unitario</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for producto in productos %}
+        <tr>
+            <td>{{ producto.producto.nombre }}</td>
+            <td>${{ producto.precio_unitario }}</td>
+            <td>{{ producto.cantidad }}</td>
+            <td>${{ producto.subtotal }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3" class="text-right"><strong>Total:</strong></td>
+            <td><strong>${{ guia.total }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+
+<a href="{% url 'listar_guias' %}" class="btn btn-secondary">Volver</a>
+{% endblock %}
 
 <style>
     body {

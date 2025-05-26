@@ -63,10 +63,9 @@ class GuiaEnvioForm(forms.ModelForm):
                 'rows': 3,
                 'required': 'required'
             }),
-             'cliente_direccion2': forms.TextInput(attrs={
+            'cliente_direccion2': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
-                'required': 'required'
+                'rows': 3
             }),
             'producto': forms.Select(attrs={
                 'class': 'form-control',
@@ -77,6 +76,9 @@ class GuiaEnvioForm(forms.ModelForm):
                 'required': 'required',
                 'min': 1
             }),
+            'contenido': forms.TextInput(attrs={
+                'class': 'form-control'
+            })
         }
         model = GuiaEnvio
         fields = '__all__'
@@ -99,7 +101,7 @@ class GuiaEnvioForm(forms.ModelForm):
         self.fields['cliente_telefono'].required = True
         self.fields['cliente_ciudad'].required = True
         self.fields['cliente_direccion'].required = True
-        self.fields['producto'].required = True
-        self.fields['cantidad'].required = True
+        #self.fields['producto'].required = True
+        #self.fields['cantidad'].required = True
         # Ordenar las ciudades alfabéticamente
         self.fields['cliente_ciudad'].choices = sorted(GuiaEnvio.CIUDAD_CHOICES, key=lambda x: x[1])

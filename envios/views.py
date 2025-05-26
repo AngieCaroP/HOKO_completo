@@ -204,7 +204,6 @@ def ver_bodega(request, id):
     return render(request, 'bodegas/ver_bodega.html', {'bodega': bodega})
 
 #=======guias========
-
 def crear_guia(request):
     if request.method == 'POST':
         form = GuiaEnvioForm(request.POST)
@@ -212,44 +211,29 @@ def crear_guia(request):
             try:
                 guia = form.save(commit=False)
                 
-                # Asegurar que el estado tenga un valor si no se proporcionó
-                if not guia.estado:
-                    guia.estado = 'pendiente'
+                # Procesar productos manualmente
+                productos_seleccionados = []
+                i = 0
+                while f'productos[{i}][id]' in request.POST:
+                    producto_id = request.POST[f'productos[{i}][id]']
+                    cantidad = request.POST[f'productos[{i}][cantidad]']
+                    producto = Producto.objects.get(id=producto_id)
+                    productos_seleccionados.append(f"{cantidad}-{producto.nombre}")
+                    i += 1
                 
-                # Aquí podrías asignar el usuario si quieres:
-                # if request.user.is_authenticated:
-                #     guia.usuario_creacion = request.user
-
+                guia.contenido = ", ".join(productos_seleccionados)[:500]
                 guia.save()
-
-                messages.success(request, f'Guía #{guia.id} creada exitosamente! Código: {guia.codigo_seguimiento}')
+                
+                messages.success(request, 'Guía creada exitosamente!')
                 return redirect('ver_guia', id=guia.id)
             except Exception as e:
-                messages.error(request, f'Error al crear la guía: {str(e)}')
+                messages.error(request, f'Error: {str(e)}')
         else:
-            # Mostrar errores específicos del formulario
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'Error en {field}: {error}')
+            messages.error(request, 'Por favor corrige los errores en el formulario.')
     else:
-        # Cuando es GET, inicializar el formulario
         form = GuiaEnvioForm(initial={'estado': 'pendiente'})
-
-    # Cargar productos para mostrar en la plantilla
-    productos = Producto.objects.all()
-    query = request.GET.get('q', '')
-
-    if query:
-        productos = productos.filter(
-            Q(nombre__icontains=query) | 
-            Q(referencia__icontains=query)
-        )
-
-    return render(request, 'guias/crear_guia.html', {
-        'form': form,
-        'productos': productos,
-        'query': query
-    })
+    
+    return render(request, 'guias/crear_guia.html', {'form': form})
 
 def ver_guia(request, id):
     guia = get_object_or_404(GuiaEnvio, id=id)
@@ -264,8 +248,7 @@ def listar_guias(request):
     estado = request.GET.get('estado', '')
     ciudad = request.GET.get('ciudad', '')
     search_query = request.GET.get('search', '').strip()
-    fecha_inicio = request.GET.get('fecha_inicio', '')
-    fecha_fin = request.GET.get('fecha_fin', '')
+  
 
     # Filtros individuales
     if estado:
@@ -280,13 +263,6 @@ def listar_guias(request):
             Q(producto__nombre__icontains=search_query)
         )
 
-    if fecha_inicio:
-        guias = guias.filter(fecha_creacion__gte=fecha_inicio)
-    if fecha_fin:
-        from datetime import datetime, timedelta
-        fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d') + timedelta(days=1)
-        guias = guias.filter(fecha_creacion__lte=fecha_fin_dt)
-
     ciudades = set(GuiaEnvio.objects.values_list('cliente_ciudad', flat=True).distinct())
     ciudades_choices = [(ciudad, ciudad) for ciudad in ciudades]
 
@@ -297,8 +273,7 @@ def listar_guias(request):
         'estado_selected': estado,
         'ciudad_selected': ciudad,
         'search_query': search_query,
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin
+    
     })
 
 

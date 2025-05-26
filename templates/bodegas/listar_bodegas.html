@@ -16,15 +16,7 @@
     </a>
       <a href="{% url 'crear_bodega' %}" class="btn crear">➕ Nueva Bodega</a>
       
-      <!-- Filtros -->
-      <div class="filters">
-        <select id="filter-ciudad" class="filter-select">
-          <option value="">Todas las ciudades</option>
-          <option value="guayaquil">Guayaquil</option>
-          <option value="quito">Quito</option>
-          <option value="otra">Otras</option>
-        </select>
-      </div>
+    
     </div>
   </div>
 
@@ -37,7 +29,7 @@
           <th>ID</th>
           <th>Nombre</th>
           <th>Dirección</th>
-          <th>Ciudad</th>
+         
           <th>Teléfono</th>
           <th>Acciones</th>
         </tr>
@@ -52,7 +44,7 @@
           <td>{{ bodega.id }}</td>
           <td>{{ bodega.nombre }}</td>
           <td>{{ bodega.direccion|default:"-" }}</td>
-          <th> {{ form.cliente_ciudad }}</th>
+         
           <td>{{ bodega.telefono|default:"-" }}</td>
           <td>
             <a href="{% url 'ver_bodega' bodega.id %}" class="btn ver">👁️</a>
