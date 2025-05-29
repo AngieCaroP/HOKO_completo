@@ -7,60 +7,67 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-<div class="products-container">
+<div class="products-container"> {# Asumo que esta clase viene de tu base.html o CSS global #}
     <h1>Guías de Envío</h1>
 
     <!-- Barra de acciones -->
     <div class="products-actions">
         <form method="get" id="search-form" class="search-form" style="display: flex; flex-grow: 1; align-items: center; gap: 5px;">
-            <input type="text" name="search" id="search-input" 
-                   placeholder="Buscar por ID, código, cliente, producto..." 
-                   class="search-form-input" 
-                   value="{{ request.GET.search }}"
-                   style="flex-grow: 1; min-width: 800px; height: 38px; padding: 0 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <input type="text" name="search" id="search-input"
+                   placeholder="Buscar por ID, código, cliente, contenido..."
+                   class="search-form-input"
+                   value="{{ search_query|default:'' }}"
+                   style="flex-grow: 1; min-width: 600px; height: 38px; padding: 0 10px; border: 1px solid #ddd; border-radius: 4px;">
             <button type="submit" class="btn search-form-btn" style="height: 38px; padding: 0 15px; white-space: nowrap;">
                 <i class="fas fa-search" style="margin-right: 5px;"></i> Buscar
             </button>
         </form>
 
-
-        <div class="action-buttons">
-            <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+        <div class="action-buttons" style="display: flex; align-items: center; gap: 10px;">
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary" title="Limpiar filtros y búsqueda">
                 <i class="fas fa-sync-alt"></i> Limpiar
             </a>
             <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
 
             <!-- Filtros -->
             <div class="popover-container">
-                <button type="button" class="popover-toggle btn" id="togglePopover">🛠️ Filtros</button>
-                <div class="popover hidden" id="filterPopover">
+                <button type="button" class="popover-toggle btn" id="togglePopover" title="Abrir filtros avanzados">🛠️ Filtros</button>
+                <div class="popover hidden" id="filterPopover" style="position: absolute; background-color: white; border: 1px solid #ccc; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; min-width: 250px; border-radius: 5px;">
                     <form method="get" id="filters-form">
-                        <h4>ESTADO</h4>
-                        <select name="estado" class="filter-select">
+                        <h4 style="margin-top:0; margin-bottom: 5px;">ESTADO</h4>
+                        <select name="estado" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
                             <option value="">Todos los estados</option>
                             {% for value, label in estados %}
-                            <option value="{{ value }}" {% if request.GET.estado|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if estado_selected|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                                {{ label }}
+                            </option>
                             {% endfor %}
                         </select>
 
-                        <h4>CIUDAD</h4>
-                        <select name="ciudad" class="filter-select">
+                        <h4 style="margin-bottom: 5px;">CIUDAD</h4>
+                        <select name="ciudad" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
                             <option value="">Todas las ciudades</option>
-                            {% for ciudad in ciudades %}
-                            <option value="{{ ciudad.0 }}" {% if request.GET.ciudad|stringformat:"s" == ciudad.0|stringformat:"s" %}selected{% endif %}>{{ ciudad.1 }}</option>
+                            {% for c_value, c_label in ciudades %} {# 'ciudades' viene de la vista como (valor, etiqueta) #}
+                            <option value="{{ c_value }}" {% if ciudad_selected|stringformat:"s" == c_value|stringformat:"s" %}selected{% endif %}>
+                                {{ c_label }}
+                            </option>
                             {% endfor %}
                         </select>
 
-                        <h4>FECHA DE CRACIÓN</h4>
-                        <div class="date-filters">
-                            <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="filter-date">
-                            <span>a</span>
-                            <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="filter-date">
+                        <h4 style="margin-bottom: 5px;">FECHA DE CREACIÓN</h4>
+                        <div class="date-filters" style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+                            <input type="date" name="fecha_inicio" value="{{ fecha_inicio_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
+                            <span style="margin: 0 5px;">a</span>
+                            <input type="date" name="fecha_fin" value="{{ fecha_fin_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
                         </div>
-<button class="btn exportar">⬇ Exportar como TXT</button>
-                        <button class="btn exportarExcel">⬇ Exportar como Excel</button>
-                        <button class="btn exportarPdf">⬇ Exportar como PDF</button>
-                        <button type="submit" class="btn btn-primary">Aplicar</button>
+                        
+                        <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
+                            <button type="button" class="btn exportar" style="width: 100%;">⬇ Exportar como TXT</button>
+                            <button type="button" class="btn exportarExcel" style="width: 100%;">⬇ Exportar como Excel</button>
+                            <button type="button" class="btn exportarPdf" style="width: 100%;">⬇ Exportar como PDF</button>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Aplicar Filtros</button>
                     </form>
                 </div>
             </div>
@@ -68,201 +75,332 @@
     </div>
     
     <!-- Tabla de guías -->
-    <div class="table-wrapper">
-        <table class="products-table" id="guias-table">
+    <div class="table-wrapper" style="overflow-x: auto; margin-top: 20px;">
+        <table class="products-table" id="guias-table" style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr>
-                    <th><input type="checkbox" id="select-all"></th>
-                    <th>ID</th>
-                    <th>Código</th>
-                    <th>Cliente</th>
-                    <th>Ciudad</th>
-                    <th>Producto</th>
-                    <th>Estado</th>
-                    <th>Creación</th>
-                    <th>Modificación</th>
-                    <th>Acciones</th>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;"><input type="checkbox" id="select-all" title="Seleccionar todo"></th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">ID</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Código</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Cliente</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Ciudad</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Contenido (Resumen)</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Estado</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Creación</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Modificación</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for guia in guias %}
-                <tr data-id="{{ guia.id }}" 
-                    data-codigo="{{ guia.codigo_seguimiento|lower }}" 
-                    data-cliente="{{ guia.cliente_nombre|lower }}" 
-                    data-producto="{{ guia.producto.nombre|lower }}"
-                    data-ciudad="{{ guia.cliente_ciudad|lower }}" 
-                    data-estado="{{ guia.estado }}">
-                    <td><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
-                    <td>{{ guia.id }}</td>
-                    <td>{{ guia.codigo_seguimiento }}</td>
-                    <td>{{ guia.cliente_nombre }}</td>
-                    <td>{{ guia.cliente_ciudad }}</td>
-                    <td>{{ guia.producto.nombre }}</td>
-                    <td>
+                <tr data-id="{{ guia.id }}"
+                    data-codigo="{{ guia.codigo_seguimiento|lower }}"
+                    data-cliente="{{ guia.cliente_nombre|lower }}"
+                    data-productos="{{ guia.contenido_resumen|default:''|lower }}" {# Usando contenido_resumen #}
+                    data-ciudad="{{ guia.cliente_ciudad|lower }}"
+                    data-estado="{{ guia.estado|lower }}">
+                    <td style="padding: 10px; border: 1px solid #ddd;"><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.id }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.codigo_seguimiento }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_nombre }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_ciudad }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        {{ guia.contenido_resumen|default:"(Sin resumen)"|truncatewords:7 }}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
                         <span class="badge 
                             {% if guia.estado == 'entregado' %}badge-success
                             {% elif guia.estado == 'cancelado' %}badge-danger
-                            {% else %}badge-warning{% endif %}">
+                            {% elif guia.estado == 'pendiente' %}badge-secondary
+                            {% elif guia.estado == 'transito' %}badge-info 
+                            {% elif guia.estado == 'preparacion' %}badge-warning
+                            {% else %}badge-light{% endif %}"
+                            style="padding: 5px 10px; border-radius: 12px; font-size: 0.9em; color: white; 
+                                   background-color: {% if guia.estado == 'entregado' %}#28a745{% elif guia.estado == 'cancelado' %}#dc3545{% elif guia.estado == 'pendiente' %}#6c757d{% elif guia.estado == 'transito' %}#17a2b8{% elif guia.estado == 'preparacion' %}#ffc107{% else %}#f8f9fa; color: #333; border: 1px solid #ccc;{% endif %}">
                             {{ guia.get_estado_display }}
                         </span>
                     </td>
-                    <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                    <td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                    <td>
-                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a>
-                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a>
-                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center; white-space: nowrap;">
+                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver" title="Ver Guía">👁️</a>
+                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar" title="Editar Guía">✏️</a>
+                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar" title="Eliminar Guía">🗑️</a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-center">No hay guías registradas</td>
+                    <td colspan="10" class="text-center" style="padding: 20px; border: 1px solid #ddd; text-align: center;">
+                        No hay guías registradas que coincidan con los filtros aplicados.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+    .products-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+        gap: 10px; /* Espacio entre grupos de botones */
+    }
+
+    .search-form {
+        flex-grow: 1; /* Que ocupe el espacio disponible */
+        min-width: 300px; /* Ancho mínimo para la búsqueda */
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px; /* Espacio entre botones directos */
+        align-items: center;
+    }
+
+    .popover-container {
+        position: relative; /* Para el posicionamiento del popover */
+    }
+
+    .popover.hidden {
+        display: none;
+    }
+
+    /* Estilos básicos para los botones si no los tienes definidos globalmente */
+    .btn {
+        padding: 8px 15px;
+        border: 1px solid #ccc;
+        background-color: #f8f8f8;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #333;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .btn:hover {
+        background-color: #e2e2e2;
+    }
+    .btn.crear {
+        background-color: #5cb85c;
+        color: white;
+        border-color: #4cae4c;
+    }
+    .btn.crear:hover {
+        background-color: #4cae4c;
+    }
+    .btn.btn-primary {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    .btn.btn-primary:hover {
+        background-color: #0056b3;
+    }
+    .btn.btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border-color: #6c757d;
+    }
+    .btn.btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    .badge {
+        display: inline-block;
+        padding: .35em .65em;
+        font-size: .75em;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: .375rem;
+    }
+    .badge-success { background-color: #28a745; }
+    .badge-danger { background-color: #dc3545; }
+    .badge-secondary { background-color: #6c757d; }
+    .badge-info { background-color: #17a2b8; }
+    .badge-warning { background-color: #ffc107; color: #212529; } /* Amarillo necesita texto oscuro a veces */
+    .badge-light { background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; }
+
+
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Popover de filtros
-    const toggle = document.getElementById('togglePopover');
-    const popover = document.getElementById('filterPopover');
-    
-    toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        popover.classList.toggle('hidden');
-    });
-    
-    document.addEventListener('click', function(e) {
-        if (!popover.contains(e.target) && !toggle.contains(e.target)) {
-            popover.classList.add('hidden');
-        }
-    });
+    const togglePopoverBtn = document.getElementById('togglePopover');
+    const filterPopoverDiv = document.getElementById('filterPopover');
 
-    // Manejar el formulario de búsqueda para preservar otros filtros
-    const searchForm = document.getElementById('search-form');
-    const filterForm = document.getElementById('filters-form');
-    
-    searchForm.addEventListener('submit', function(e) {
-        // Copiar todos los filtros actuales al formulario de búsqueda
-        const filterInputs = filterForm.querySelectorAll('input, select');
-        filterInputs.forEach(input => {
-            if (input.name && input.value) {
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = input.name;
-                hiddenInput.value = input.value;
-                searchForm.appendChild(hiddenInput);
+    if (togglePopoverBtn && filterPopoverDiv) {
+        togglePopoverBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Evitar que el clic se propague al documento
+            filterPopoverDiv.classList.toggle('hidden');
+        });
+
+        // Cerrar popover si se hace clic fuera de él
+        document.addEventListener('click', function(e) {
+            if (!filterPopoverDiv.contains(e.target) && !togglePopoverBtn.contains(e.target)) {
+                filterPopoverDiv.classList.add('hidden');
             }
         });
-    });
-
-    // Manejar cambios en los filtros para preservar la búsqueda
-    filterForm.addEventListener('submit', function(e) {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput.value.trim()) {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'search';
-            hiddenInput.value = searchInput.value.trim();
-            filterForm.appendChild(hiddenInput);
-        }
-    });
-});
-
-    // Función para obtener datos de la tabla
-    function getTableData() {
-        const rows = document.querySelectorAll('#guias-table tbody tr:not([style*="display: none"])');
-        return Array.from(rows).map(row => {
-            const cells = row.querySelectorAll('td');
-            return {
-                ID: cells[1].textContent.trim(),
-                Código: cells[2].textContent.trim(),
-                Cliente: cells[3].textContent.trim(),
-                Ciudad: cells[4].textContent.trim(),
-                Producto: cells[5].textContent.trim(),
-                Estado: cells[6].textContent.trim(),
-                Creación: cells[7].textContent.trim()
-            };
+        // Evitar que el clic dentro del popover lo cierre
+        filterPopoverDiv.addEventListener('click', function(e) {
+            e.stopPropagation();
         });
     }
 
-    // Exportar a TXT
-    document.querySelector('.exportar').addEventListener('click', function() {
-        const data = getTableData();
-        let txtContent = 'Guías de Envío\n\n';
-        txtContent += 'ID\tCódigo\tCliente\tCiudad\tProducto\tEstado\tCreación\n';
-        
-        data.forEach(item => {
-            txtContent += `${item.ID}\t${item.Código}\t${item.Cliente}\t${item.Ciudad}\t${item.Producto}\t${item.Estado}\t${item.Creación}\n`;
+    // Combinar filtros de búsqueda principal con filtros del popover
+    const mainSearchForm = document.getElementById('search-form');
+    const filtersPopoverForm = document.getElementById('filters-form');
+
+    if (mainSearchForm && filtersPopoverForm) {
+        mainSearchForm.addEventListener('submit', function(e) {
+            // Añadir filtros del popover al formulario de búsqueda principal
+            const popoverInputs = filtersPopoverForm.querySelectorAll('select, input[type="date"]');
+            popoverInputs.forEach(input => {
+                if (input.name && input.value) {
+                    let hiddenInput = mainSearchForm.querySelector(`input[type="hidden"][name="${input.name}"]`);
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = input.name;
+                        mainSearchForm.appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = input.value;
+                }
+            });
         });
-        
-        const blob = new Blob([txtContent], { type: 'text/plain' });
+
+        filtersPopoverForm.addEventListener('submit', function(e) {
+            // Añadir el valor de la búsqueda principal al formulario de filtros del popover
+            const mainSearchInput = document.getElementById('search-input');
+            if (mainSearchInput && mainSearchInput.value.trim()) {
+                let hiddenSearch = filtersPopoverForm.querySelector('input[type="hidden"][name="search"]');
+                if (!hiddenSearch) {
+                    hiddenSearch = document.createElement('input');
+                    hiddenSearch.type = 'hidden';
+                    hiddenSearch.name = 'search';
+                    filtersPopoverForm.appendChild(hiddenSearch);
+                }
+                hiddenSearch.value = mainSearchInput.value.trim();
+            }
+        });
+    }
+
+    // Función para obtener datos de la tabla para exportación
+    function getTableDataForExport() {
+        const tableBody = document.querySelector('#guias-table tbody');
+        if (!tableBody) return [];
+
+        const rows = tableBody.querySelectorAll('tr');
+        const data = [];
+
+        rows.forEach(row => {
+            const isDataRow = !row.querySelector('td[colspan="10"]'); // Excluir fila de "No hay guías"
+            if (isDataRow) { // Solo filas de datos
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 8) {
+                    let estadoText = cells[6].textContent.trim();
+                    const badge = cells[6].querySelector('.badge');
+                    if (badge) {
+                        estadoText = badge.textContent.trim();
+                    }
+                    data.push({
+                        ID: cells[1].textContent.trim(),
+                        Código: cells[2].textContent.trim(),
+                        Cliente: cells[3].textContent.trim(),
+                        Ciudad: cells[4].textContent.trim(),
+                        Contenido: cells[5].textContent.trim(),
+                        Estado: estadoText,
+                        Creación: cells[7].textContent.trim(),
+                        // Modificación: cells[8].textContent.trim(), // Si la quieres exportar
+                    });
+                }
+            }
+        });
+        return data;
+    }
+
+    // Event Listeners para botones de exportación
+    function setupExportButton(selector, exportFunction) {
+        const btn = document.querySelector(selector);
+        if (btn) {
+            btn.addEventListener('click', function() {
+                const dataToExport = getTableDataForExport();
+                if (dataToExport.length === 0) {
+                    alert("No hay datos filtrados para exportar.");
+                    return;
+                }
+                exportFunction(dataToExport);
+            });
+        }
+    }
+
+    setupExportButton('.exportar', function(data) { // TXT
+        let txtContent = 'ID\tCódigo\tCliente\tCiudad\tContenido\tEstado\tCreación\n';
+        data.forEach(item => {
+            txtContent += `${item.ID}\t${item.Código}\t${item.Cliente}\t${item.Ciudad}\t${item.Contenido}\t${item.Estado}\t${item.Creación}\n`;
+        });
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `guias_exportacion_${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
 
-    // Exportar a Excel
-    document.querySelector('.exportarExcel').addEventListener('click', function() {
-        const data = getTableData();
-        const ws = XLSX.utils.json_to_sheet(data);
+    setupExportButton('.exportarExcel', function(data) { // Excel
+        const ws = XLSX.utils.json_to_sheet(data, {header: ["ID", "Código", "Cliente", "Ciudad", "Contenido", "Estado", "Creación"]});
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Guías");
         XLSX.writeFile(wb, `guias_exportacion_${new Date().toISOString().slice(0,10)}.xlsx`);
     });
 
-    // Exportar a PDF
-    document.querySelector('.exportarPdf').addEventListener('click', function() {
-        const { jsPDF } = window.jspdf;
+    setupExportButton('.exportarPdf', function(data) { // PDF
+        if (typeof jspdf === 'undefined' || typeof jspdf.jsPDF === 'undefined') {
+            alert('La librería jsPDF no está cargada correctamente.');
+            return;
+        }
+        const { jsPDF } = jspdf; // Acceder a jsPDF desde el objeto global jspdf
         const doc = new jsPDF();
-        const data = getTableData();
         
-        // Encabezados
-        const headers = [
-            'ID',
-            'Código',
-            'Cliente', 
-            'Ciudad',
-            'Producto',
-            'Estado',
-            'Creación'
-        ];
-        
-        // Datos
+        const headers = [['ID', 'Código', 'Cliente', 'Ciudad', 'Contenido', 'Estado', 'Creación']];
         const rows = data.map(item => [
-            item.ID,
-            item.Código,
-            item.Cliente,
-            item.Ciudad,
-            item.Producto,
-            item.Estado,
-            item.Creación
+            item.ID, item.Código, item.Cliente, item.Ciudad, item.Contenido, item.Estado, item.Creación
         ]);
-        
-        // Título
+
         doc.text('Reporte de Guías de Envío', 14, 15);
-        
-        // Tabla
         doc.autoTable({
-            head: [headers],
+            head: headers,
             body: rows,
             startY: 25,
             margin: { top: 20 },
-            styles: { fontSize: 8 }
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
         });
-        
         doc.save(`guias_exportacion_${new Date().toISOString().slice(0,10)}.pdf`);
     });
 
-
-
+    // Seleccionar/Deseleccionar todos los checkboxes
+    const selectAllCheckbox = document.getElementById('select-all');
+    const rowCheckboxes = document.querySelectorAll('.select-row');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+});
 </script>
 {% endblock %}

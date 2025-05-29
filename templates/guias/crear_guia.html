@@ -13,22 +13,27 @@
         <div class="form-group">
             <label for="id_cliente_nombre">Nombre completo *</label>
             <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
+            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
         </div>
         <div class="form-group">
             <label for="id_cliente_telefono">Teléfono *</label>
             <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
+            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
         </div>
         <div class="form-group">
             <label for="id_cliente_ciudad">Ciudad *</label>
             <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
+                <option value="">Seleccione una ciudad</option> {# Mejor tener una opción vacía por defecto #}
                 {% for value, label in form.fields.cliente_ciudad.choices %}
-                    <option value="{{ value }}" {% if form.cliente_ciudad.value == value %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}" {% if form.cliente_ciudad.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
+            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
         </div>
         <div class="form-group">
             <label for="id_cliente_direccion">Dirección *</label>
             <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
+            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
         </div>
         <div class="form-group">
             <label for="id_cliente_direccion2">Dirección secundaria</label>
@@ -47,7 +52,6 @@
             <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
             <input type="text" id="busqueda-producto" class="form-control" placeholder="Escribe el nombre del producto...">
             
-            <!-- Contenedor para mostrar los resultados de búsqueda -->
             <div id="producto-results" class="dropdown-results" style="display: none;">
                 <table class="tabla-rosada">
                     <thead>
@@ -64,7 +68,6 @@
                 </table>
             </div>
 
-            <!-- Tabla para productos seleccionados -->
             <div id="contenedor-productos" class="mt-3">
                 <table class="tabla-rosada">
                     <thead>
@@ -83,11 +86,12 @@
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-right"><strong>Total:</strong></td>
-                            <td id="total-compra">0.00</td>
+                            <td id="total-compra">$0.00</td> {# Agregado $ para consistencia #}
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
+                 <div class="invalid-feedback" id="error-productos-tabla" style="display:none;">Debe agregar al menos un producto.</div>
             </div>
         </div>
 
@@ -97,11 +101,9 @@
             <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados</small>
         </div>
  
-        <!-- Estado oculto -->
         <input type="hidden" name="estado" value="pendiente">
     </div>
 
-    <!-- Botones -->
     <div class="form-actions text-right mt-4">
         <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
             <i class="fas fa-save"></i> Guardar
@@ -113,143 +115,135 @@
 </form>
 
 <style>
-    /* Estilo para las imágenes de productos */
-    .img-producto {
-        width: 50px;
-        height: 50px;
-        object-fit: contain;
+    .img-producto { width: 50px; height: 50px; object-fit: contain; }
+    .is-invalid { border-color: red !important; }
+    .invalid-feedback { display: none; color: red; font-size: 0.875em; margin-top: .25rem; }
+    .form-control.is-invalid + .invalid-feedback,
+    .form-control.is-invalid ~ .invalid-feedback, /* Si no es hermano directo */
+    select.is-invalid + .invalid-feedback,
+    select.is-invalid ~ .invalid-feedback {
+        display: block;
     }
+    /* Estilos para tabla (ejemplo) */
+    .tabla-rosada { width: 100%; border-collapse: collapse; }
+    .tabla-rosada th, .tabla-rosada td { border: 1px solid #f0d9e7; padding: 8px; text-align: left; }
+    .tabla-rosada thead { background-color: #fce4ec; } /* Rosa claro */
+    .dropdown-results { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; background: white; position: absolute; z-index:1000; width: calc(100% - 2px); } /* Ajuste width */
+    .text-right { text-align: right; }
+    .mt-3 { margin-top: 1rem; }
+    .mt-4 { margin-top: 1.5rem; }
+    /* Estructura dos columnas */
+    .form-container { display: flex; gap: 20px; }
+    .personal-section, .right-section { flex: 1; }
+    @media (max-width: 768px) { .form-container { flex-direction: column; } }
 </style>
 
 <script>
+// El primer DOMContentLoaded para validación de campos lo eliminamos o comentamos,
+// ya que integraremos esa lógica en el segundo.
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Función para validar el formulario
-    function validarFormulario() {
-        let isValid = true;
-        const requiredFields = [
-             'cliente_nombre', 
-                'cliente_telefono',
-                'cliente_ciudad',
-                'cliente_direccion'
-        ]; 
+    console.log("DOM para productos y guardado cargado.");
+    // Array para almacenar productos seleccionados
+    let productosSeleccionados = [];
+    const PLACEHOLDER_IMG_URL = 'https://via.placeholder.com/50'; // Definir URL de placeholder
 
-        requiredFields.forEach(fieldName => {
-            const field = document.querySelector(`[name="${fieldName}"]`);
-            if (!field || !field.value.trim()) {
+    // Selectores de elementos del DOM
+    const form = document.getElementById('miFormulario');
+    const submitBtn = document.getElementById('submitBtn');
+    const busquedaProductoInput = document.getElementById('busqueda-producto');
+    const productoResultsDiv = document.getElementById('producto-results');
+    const resultadosBusquedaTbody = document.getElementById('resultados-busqueda');
+    const productosSeleccionadosTbody = document.getElementById('productos-seleccionados');
+    const totalCompraTd = document.getElementById('total-compra');
+    const contenidoOrdenInput = document.getElementById('id_contenido');
+    const errorProductosTablaDiv = document.getElementById('error-productos-tabla');
+
+
+    // Función para validar los campos requeridos del cliente
+    function validarCamposCliente() {
+        let isValid = true;
+        const requiredClientFields = [
+            { name: 'cliente_nombre', msg: 'Nombre completo es requerido.' },
+            { name: 'cliente_telefono', msg: 'Teléfono es requerido.' },
+            { name: 'cliente_ciudad', msg: 'Ciudad es requerida.' },
+            { name: 'cliente_direccion', msg: 'Dirección es requerida.' }
+        ];
+
+        requiredClientFields.forEach(config => {
+            const field = form.querySelector(`[name="${config.name}"]`);
+            // El div de feedback debe ser hermano o estar cerca para este selector simple
+            const feedbackDiv = field.parentElement.querySelector('.invalid-feedback');
+
+            if (!field.value.trim()) {
                 isValid = false;
-                if (field) {
-                    field.classList.add('is-invalid');
-                    
-                    if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'Este campo es requerido.';
-                        field.parentNode.insertBefore(errorDiv, field.nextSibling);
-                    }
+                field.classList.add('is-invalid');
+                if (feedbackDiv) {
+                    feedbackDiv.textContent = config.msg;
+                    feedbackDiv.style.display = 'block';
                 }
-            } else if (field) {
+            } else {
                 field.classList.remove('is-invalid');
-                const errorDiv = field.nextElementSibling;
-                if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
-                    errorDiv.remove();
+                if (feedbackDiv) {
+                    feedbackDiv.style.display = 'none';
                 }
             }
         });
-
         return isValid;
     }
 
-    // Manejador del botón de guardar
-    const submitBtn = document.getElementById('submitBtn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', function(e) {
-            if (!validarFormulario()) {
-                e.preventDefault();
-                alert('Por favor complete todos los campos requeridos.');
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            }
-        });
-    }
-
-    // Validación al enviar el formulario
-    const form = document.getElementById('miFormulario');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            if (!validarFormulario()) {
-                e.preventDefault();
-                return false;
-            }
-            return true;
-        });
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Array para almacenar productos seleccionados
-    let productosSeleccionados = [];
-    
     // Función para generar el contenido de la orden
     function generarContenidoOrden() {
         let contenido = '';
         const maxCaracteres = 500;
         
         productosSeleccionados.forEach((producto, index) => {
-            const item = `${producto.cantidad}- ${producto.nombre}`;
-            
-            if (index > 0) {
-                // Verificar si al agregar este item superamos el límite
-                if ((contenido.length + item.length + 2) <= maxCaracteres) {
-                    contenido += ', ' + item;
-                } else {
-                    // Si supera el límite, truncar y salir del bucle
-                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
-                    return false;
-                }
+            const item = `${producto.cantidad}x ${producto.nombre}`; // Cambiado a "x" para claridad
+            const newEntry = (index > 0 ? ', ' : '') + item;
+
+            if ((contenido.length + newEntry.length) <= maxCaracteres) {
+                contenido += newEntry;
             } else {
-                contenido = item;
-                
-                // Verificar si solo este item supera el límite
-                if (contenido.length > maxCaracteres) {
-                    contenido = contenido.substring(0, maxCaracteres - 3) + '...';
-                    return false;
+                if (contenido.length < maxCaracteres - 3 && !contenido.endsWith("...")) {
+                     contenido = contenido.substring(0, maxCaracteres - newEntry.length - 3) + '...';
+                } else if (!contenido.endsWith("...")) {
+                     contenido = contenido.substring(0, maxCaracteres - 3) + '...';
                 }
+                return false; 
             }
         });
-        
-        document.getElementById('id_contenido').value = contenido;
+        contenidoOrdenInput.value = contenido;
     }
     
     // Función para actualizar el total
-    function actualizarTotal() {
+    function actualizarTotalYContenido() {
         let total = 0;
         productosSeleccionados.forEach(producto => {
-            total += producto.precio * producto.cantidad;
+            total += parseFloat(producto.precio) * parseInt(producto.cantidad);
         });
-        document.getElementById('total-compra').textContent = total.toFixed(2);
+        totalCompraTd.textContent = '$' + total.toFixed(2); // Añadir $
         generarContenidoOrden();
+        // No es necesario generar inputs ocultos aquí, se hace al renderizar la tabla
     }
 
     // Función para renderizar la tabla de productos
     function renderizarProductos() {
-        const tbody = document.getElementById('productos-seleccionados');
-        tbody.innerHTML = '';
+        productosSeleccionadosTbody.innerHTML = ''; // Limpiar tabla
         
         productosSeleccionados.forEach((producto, index) => {
-            const subtotal = producto.precio * producto.cantidad;
+            const subtotal = parseFloat(producto.precio) * parseInt(producto.cantidad);
             const row = document.createElement('tr');
+            // Los inputs ocultos se crean aquí, asegurando que siempre estén actualizados con la tabla
             row.innerHTML = `
-                <td><img src="${producto.imagen}" class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                <td><img src="${producto.imagen || PLACEHOLDER_IMG_URL}" class="img-producto" onerror="this.src='${PLACEHOLDER_IMG_URL}'"></td>
                 <td>${producto.nombre}</td>
-                <td>$${producto.precio.toFixed(2)}</td>
+                <td>$${parseFloat(producto.precio).toFixed(2)}</td>
                 <td>
                     <input type="number" name="productos[${index}][cantidad]" 
                            class="form-control cantidad-producto" 
                            min="1" value="${producto.cantidad}" 
                            data-index="${index}"
-                           style="width: 70px;">
+                           style="width: 70px;" required>
                 </td>
                 <td>$${subtotal.toFixed(2)}</td>
                 <td>
@@ -258,19 +252,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <input type="hidden" name="productos[${index}][id]" value="${producto.id}">
                 <input type="hidden" name="productos[${index}][nombre]" value="${producto.nombre}">
-                <input type="hidden" name="productos[${index}][precio]" value="${producto.precio}">
+                <input type="hidden" name="productos[${index}][precio]" value="${parseFloat(producto.precio).toFixed(2)}">
             `;
-            tbody.appendChild(row);
+            productosSeleccionadosTbody.appendChild(row);
         });
         
-        // Agregar event listeners a los nuevos elementos
+        // Re-adjuntar event listeners
         document.querySelectorAll('.cantidad-producto').forEach(input => {
             input.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index);
-                const nuevaCantidad = parseInt(this.value) || 1;
+                let nuevaCantidad = parseInt(this.value);
+                if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
+                    nuevaCantidad = 1; this.value = 1;
+                }
                 productosSeleccionados[index].cantidad = nuevaCantidad;
-                renderizarProductos();
-                actualizarTotal();
+                // Re-renderizar solo la fila afectada o toda la tabla
+                // Para simplicidad, re-renderizamos todo. Si hay problemas de rendimiento, optimizar.
+                renderizarProductos(); 
+                // actualizarTotalYContenido(); // renderizarProductos ya llama a esto
             });
         });
         
@@ -278,134 +277,196 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 const index = parseInt(this.dataset.index);
                 productosSeleccionados.splice(index, 1);
-                renderizarProductos();
-                actualizarTotal();
+                renderizarProductos(); // Esto actualizará los inputs ocultos y el total
             });
         });
         
-        actualizarTotal();
+        actualizarTotalYContenido(); // Actualizar total y contenido después de renderizar
+        if (productosSeleccionados.length > 0 && errorProductosTablaDiv) {
+            errorProductosTablaDiv.style.display = 'none';
+        }
     }
 
     // Función para agregar producto
     function agregarProducto(id, nombre, imagen, precio) {
-        // Verificar si el producto ya existe
-        const existe = productosSeleccionados.some(p => p.id === id);
-        
+        const existe = productosSeleccionados.some(p => p.id.toString() === id.toString());
         if (!existe) {
             productosSeleccionados.push({
-                id: id,
+                id: id.toString(), // Asegurar que ID sea string para comparaciones
                 nombre: nombre,
-                imagen: imagen || 'https://via.placeholder.com/50',
+                imagen: imagen || PLACEHOLDER_IMG_URL,
                 precio: parseFloat(precio),
                 cantidad: 1
             });
-            
-            renderizarProductos();
+            renderizarProductos(); // Esto actualizará la tabla y los inputs ocultos
+             if (errorProductosTablaDiv) errorProductosTablaDiv.style.display = 'none';
         } else {
             alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
         }
     }
 
     // Función para buscar productos
-    function searchProductos(query) {
+    function searchProductosAPI(query) {
         if (query.length < 2) {
-            document.getElementById('producto-results').style.display = 'none';
+            if (productoResultsDiv) productoResultsDiv.style.display = 'none';
             return;
         }
 
+        // Asumo que tienes un endpoint API en Django
         fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok.');
+                return response.json();
+            })
             .then(data => {
-                const resultadosBusqueda = document.getElementById('resultados-busqueda');
-                resultadosBusqueda.innerHTML = '';
-                
+                resultadosBusquedaTbody.innerHTML = ''; // Limpiar resultados previos
                 if (data.length > 0) {
                     data.forEach(producto => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td><img src="${producto.imagen || 'https://via.placeholder.com/50'}" 
-                                 class="img-producto" onerror="this.src='https://via.placeholder.com/50'"></td>
+                            <td><img src="${producto.imagen || PLACEHOLDER_IMG_URL}" 
+                                 class="img-producto" onerror="this.src='${PLACEHOLDER_IMG_URL}'"></td>
                             <td>${producto.nombre}</td>
-                            <td>$${producto.precio}</td>
+                            <td>$${parseFloat(producto.precio).toFixed(2)}</td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-primary btn-agregar" 
+                                <button type="button" class="btn btn-sm btn-primary btn-agregar-busqueda" 
                                     data-id="${producto.id}"
-                                    data-nombre="${producto.nombre.replace(/"/g, '&quot;')}"
-                                    data-imagen="${producto.imagen || 'https://via.placeholder.com/50'}"
+                                    data-nombre="${producto.nombre.replace(/"/g, '"')}"
+                                    data-imagen="${producto.imagen || ''}"
                                     data-precio="${producto.precio}">
                                     Agregar
                                 </button>
                             </td>
                         `;
-                        resultadosBusqueda.appendChild(row);
+                        resultadosBusquedaTbody.appendChild(row);
                     });
                     
-                    // Agregar event listeners a los botones de agregar
-                    document.querySelectorAll('.btn-agregar').forEach(btn => {
-                        btn.addEventListener('click', function() {
+                    // Adjuntar listeners a los botones de agregar de la búsqueda
+                    document.querySelectorAll('.btn-agregar-busqueda').forEach(btn => {
+                        const newBtn = btn.cloneNode(true); // Clonar para evitar listeners duplicados
+                        btn.parentNode.replaceChild(newBtn, btn);
+                        newBtn.addEventListener('click', function() {
                             agregarProducto(
                                 this.dataset.id,
                                 this.dataset.nombre,
                                 this.dataset.imagen,
                                 this.dataset.precio
                             );
-                            document.getElementById('producto-results').style.display = 'none';
-                            document.getElementById('busqueda-producto').value = '';
+                            if (productoResultsDiv) productoResultsDiv.style.display = 'none';
+                            if (busquedaProductoInput) busquedaProductoInput.value = '';
                         });
                     });
                     
-                    document.getElementById('producto-results').style.display = 'block';
+                    if (productoResultsDiv) productoResultsDiv.style.display = 'block';
                 } else {
-                    document.getElementById('producto-results').style.display = 'none';
+                    if (productoResultsDiv) productoResultsDiv.style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('Error al buscar productos:', error);
-                document.getElementById('producto-results').style.display = 'none';
+                if (productoResultsDiv) productoResultsDiv.style.display = 'none';
             });
     }
 
-    // Event listeners
-    document.getElementById('busqueda-producto').addEventListener('input', function() {
-        searchProductos(this.value);
-    });
+    // --- MANEJO DEL BOTÓN GUARDAR Y VALIDACIÓN DEL FORMULARIO ---
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            console.log("Formulario submit event disparado.");
+
+            // 1. Validar campos del cliente
+            const clienteEsValido = validarCamposCliente();
+
+            // 2. Validar que haya al menos un producto seleccionado
+            let productosSonValidos = true;
+            if (productosSeleccionados.length === 0) {
+                productosSonValidos = false;
+                if (errorProductosTablaDiv) {
+                    errorProductosTablaDiv.textContent = 'Debe agregar al menos un producto a la guía.';
+                    errorProductosTablaDiv.style.display = 'block';
+                }
+                alert('Debe agregar al menos un producto a la guía.');
+            } else {
+                 if (errorProductosTablaDiv) errorProductosTablaDiv.style.display = 'none';
+            }
+
+            // 3. Si alguna validación falla, prevenir el envío
+            if (!clienteEsValido || !productosSonValidos) {
+                e.preventDefault(); // Detener el envío
+                console.log("Validación fallida. Cliente:", clienteEsValido, "Productos:", productosSonValidos);
+                
+                // Re-habilitar botón en caso de que se haya deshabilitado por un clic anterior
+                // (aunque el listener de 'click' en submitBtn ya lo maneja)
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+
+                // Enfocar primer error
+                const primerCampoInvalido = form.querySelector('.is-invalid');
+                if (primerCampoInvalido) {
+                    primerCampoInvalido.focus();
+                } else if (!productosSonValidos && busquedaProductoInput) {
+                    busquedaProductoInput.focus();
+                }
+                return; // No continuar
+            }
+
+            // 4. Si todo es válido, deshabilitar botón y permitir envío
+            console.log("Validación exitosa. Formularios ocultos de productos ya están en el DOM por renderizarProductos().");
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // El formulario se enviará porque no se llamó a e.preventDefault()
+        });
+    } else {
+        console.error("Formulario o botón de submit no encontrado.");
+    }
+
+    // --- EVENT LISTENERS INICIALES ---
+    if (busquedaProductoInput) {
+        let searchTimeout;
+        busquedaProductoInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchProductosAPI(this.value);
+            }, 300); // Debounce
+        });
+    }
 
     // Ocultar resultados al hacer clic fuera
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('#producto-results') && !e.target.closest('#busqueda-producto')) {
-            document.getElementById('producto-results').style.display = 'none';
+        if (productoResultsDiv && !productoResultsDiv.contains(e.target) && e.target !== busquedaProductoInput) {
+            productoResultsDiv.style.display = 'none';
         }
     });
 
-    // Validación antes de enviar
-    document.getElementById('miFormulario').addEventListener('submit', function(e) {
-        if (productosSeleccionados.length === 0) {
-            e.preventDefault();
-            alert('Debe agregar al menos un producto');
-            return false;
-        }
-        
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-        return true;
-    });
+    // Precargar productos si estamos editando (o si se repopula después de un error de backend)
+    // Para que esto funcione al editar, la vista debe pasar `form.productos.value`
+    // o una variable similar con los productos actuales.
+    const initialProductsData = {% if form.productos_json_data %}{{ form.productos_json_data|safe }}{% else %}{% if form.productos.value %}
+        [{% for producto_item in form.productos.value %}
+            {
+                "id": "{{ producto_item.id }}",
+                "nombre": "{{ producto_item.nombre|escapejs }}",
+                "imagen": "{{ producto_item.imagen|default:PLACEHOLDER_IMG_URL }}",
+                "precio": "{{ producto_item.precio|stringformat:'.2f' }}",
+                "cantidad": "{{ producto_item.cantidad|default:1 }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}]
+    {% else %}"[]"{% endif %}{% endif %};
 
-    // Precargar productos si estamos editando
-    {% if form.productos.value %}
-        {% for producto in form.productos.value %}
-            agregarProducto(
-                {{ producto.id }}, 
-                '{{ producto.nombre|escapejs }}', 
-                '{{ producto.imagen|default:"https://via.placeholder.com/50" }}', 
-                {{ producto.precio }}
-            );
-        {% endfor %}
-        renderizarProductos();
-    {% endif %}
-});
+    if (Array.isArray(initialProductsData) && initialProductsData.length > 0) {
+        productosSeleccionados = initialProductsData.map(p => ({
+            id: p.id.toString(),
+            nombre: p.nombre,
+            imagen: p.imagen || PLACEHOLDER_IMG_URL,
+            precio: parseFloat(p.precio),
+            cantidad: parseInt(p.cantidad) || 1
+        }));
+        renderizarProductos(); // Renderizar con los productos cargados
+    } else {
+        renderizarProductos(); // Asegurar que la tabla se renderice vacía si no hay datos iniciales
+    }
     
-
+    console.log("Script completamente cargado y configurado.");
+});
 </script>
 {% endblock %}
-

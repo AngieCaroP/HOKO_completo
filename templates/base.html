@@ -35,14 +35,19 @@
                     <i class="fas fa-warehouse"></i> Stock
                 </a>
             </li>
-            <li class="menu-item {% if request.resolver_match.url_name == 'listar_stocks' %}active{% endif %}">
+            <li class="menu-item {% if request.resolver_match.url_name == 'listar_bodegas' %}active{% endif %}">
               <a href="{% url 'listar_bodegas' %}">
                   <i class="fas fa-warehouse"></i> Bodegas
               </a>
           </li>
-          <li class="menu-item {% if request.resolver_match.url_name == 'listar_stocks' %}active{% endif %}">
+          <li class="menu-item {% if request.resolver_match.url_name == 'listar_guias' %}active{% endif %}">
             <a href="{% url 'listar_guias' %}">
                 <i class="fas fa-warehouse"></i> Guias
+            </a>
+        </li>
+         <li class="menu-item {% if request.resolver_match.url_name == 'save_campaign' %}active{% endif %}">
+            <a href="{% url 'index' %}">
+                <i class="fas fa-warehouse"></i> Guias Contador
             </a>
         </li>
         </ul>

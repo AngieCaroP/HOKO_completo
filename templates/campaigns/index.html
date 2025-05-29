@@ -1,0 +1,76 @@
+<!-- campaigns/templates/campaigns/index.html -->
+{% extends 'campaigns/base_guardadas.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/styles_generador.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- tu contenido aquí -->
+<div class="form-section">
+    <h2>Configuración de Campañas</h2>
+    <label>País:</label>
+    <select id="pais" onchange="actualizarListaRelojes()">
+        <option value="Seleccionar">Seleccionar Ciudad</option>
+        <option value="ECU">ECU</option>
+        <option value="COL">COL</option>
+        <option value="VEN">VEN</option>
+    </select>
+
+    <label>Plataforma:</label>
+    <select id="plataforma" onchange="actualizarSeleccion()">
+        <option value="Seleccionar-plataforma">Seleccionar plataforma</option>
+        <option value="FACEBOOK">Facebook</option>
+        <option value="TIKTOK">TikTok</option>
+    </select>
+
+    <label>Campaña:</label>
+    <select id="campana" onchange="actualizarSeleccion()">
+        <option value="CBO">CBO</option>
+        <option value="ABO">ABO</option>
+        <option value="FLEXIBLE">FLEXIBLE</option>
+    </select>
+
+    <label>Fecha:</label>
+    <input type="date" id="fecha" onchange="actualizarSeleccion()">
+
+    <label>Nombre del Reloj:</label>
+    <input type="text" id="busquedaReloj" list="listaRelojes" oninput="actualizarDatosReloj()"
+        onchange="actualizarDatosReloj()" placeholder="Escriba para buscar...">
+    <!-- Cambiado oninput a actualizarDatosReloj para consistencia -->
+    <datalist id="listaRelojes"></datalist>
+
+    <label>ID del Reloj:</label>
+    <input type="text" id="idReloj" readonly>
+
+    <label>Persona quien lo hizo:</label>
+    <select id="persona" onchange="actualizarSeleccion()">
+        <option value="DP">DP</option>
+        <option value="CP">CP</option>
+        <option value="KO">KO</option>
+    </select>
+
+    <label>Número de Importación:</label>
+    <input type="text" id="numImportacion" readonly>
+
+    <label>Selección actual:</label>
+    <textarea id="seleccionActual" rows="3" readonly></textarea>
+
+    <!-- Botones de acción movidos aquí dentro del form-section o justo después -->
+    <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid #eee;">
+        <button onclick="copiarTexto()">Copiar</button>
+        <button onclick="limpiarCampos()">Limpiar</button> <!-- Asumiendo que tienes limpiarCampos en script.js -->
+        <button onclick="guardarCampaña()">Guardar Campaña y Avanzar Contador</button>
+        <a href="{% url 'campanas_guardadas' %}" class="btn">Campañas guardadas</a>
+    </div>
+</div>
+
+
+
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/styles_generador.js' %}"></script>
+{% endblock %}

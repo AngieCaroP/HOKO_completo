@@ -1,7 +1,6 @@
 from django import forms
-from .models import  Producto, Stock, Bodega, GuiaEnvio  # Asegúrate de importar Bodega de models.py
+from .models import Producto, Stock, Bodega, GuiaEnvio
 
-#producto
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
@@ -14,7 +13,6 @@ class ProductoForm(forms.ModelForm):
             'precio': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-#stock
 class StockForm(forms.ModelForm):
     class Meta:
         model = Stock
@@ -25,83 +23,50 @@ class StockForm(forms.ModelForm):
             'stock_actual': forms.NumberInput(attrs={'class': 'form-control'}),
             'umbral_minimo': forms.NumberInput(attrs={'class': 'form-control'}),
         }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Asegúrate que el queryset de bodegas esté ordenado
         self.fields['bodega'].queryset = Bodega.objects.all().order_by('nombre')
-        
-#bodegas
+        if 'estado' in self.fields:
+            self.fields['estado'].disabled = True
+
 class BodegaForm(forms.ModelForm):
     class Meta:
         model = Bodega
         fields = ['nombre', 'direccion', 'telefono']
-
-#guias
-
-# envios/forms.py (actualización)
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+        }
 
 class GuiaEnvioForm(forms.ModelForm):
     class Meta:
         model = GuiaEnvio
-        fields = '__all__'
+        fields = [
+            'cliente_nombre', 'cliente_telefono', 'cliente_ciudad',
+            'cliente_direccion', 'cliente_direccion2',
+            'contenido_resumen',
+            'observaciones', 'estado',
+        ]
         widgets = {
-            'cliente_nombre': forms.TextInput(attrs={
-                'class': 'form-control',
-                'required': 'required'
-            }),
-            'cliente_telefono': forms.TextInput(attrs={
-                'class': 'form-control',
-                'required': 'required'
-            }),
-            'cliente_ciudad': forms.Select(attrs={
-                'class': 'form-control',
-                'required': 'required'
-            }),
-            'cliente_direccion': forms.TextInput(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'required': 'required'
-            }),
-            'cliente_direccion2': forms.TextInput(attrs={
-                'class': 'form-control',
-                'rows': 3
-            }),
-            'producto': forms.Select(attrs={
-                'class': 'form-control',
-                'required': 'required'
-            }),
-            'cantidad': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'required': 'required',
-                'min': 1
-            }),
-            'contenido': forms.TextInput(attrs={
-                'class': 'form-control'
-            })
+            'cliente_nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'cliente_telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'cliente_ciudad': forms.Select(attrs={'class': 'form-control'}),
+            'cliente_direccion': forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
+            'cliente_direccion2': forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
+            'contenido_resumen': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'id': 'id_contenido'}),
+            'observaciones': forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
+            'estado': forms.Select(attrs={'class': 'form-control'}),
         }
-        model = GuiaEnvio
-        fields = '__all__'
-        widgets = {
-            'cliente_ciudad': forms.Select(attrs={
-                'class': 'form-control',
-                'required': 'required'
-            }),
-        }
-
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Establecer valor por defecto para estado
-        self.fields['estado'].initial = 'pendiente'
-        # Ordenar productos por nombre
-        self.fields['producto'].queryset = Producto.objects.order_by('nombre')
-        # Configurar campos requeridos
+        if 'estado' in self.fields:
+             self.fields['estado'].initial = 'pendiente'
+        if 'cliente_ciudad' in self.fields:
+            self.fields['cliente_ciudad'].choices = sorted(GuiaEnvio.CIUDAD_CHOICES, key=lambda x: x[1])
+            self.fields['cliente_ciudad'].required = True
+
         self.fields['cliente_nombre'].required = True
         self.fields['cliente_telefono'].required = True
-        self.fields['cliente_ciudad'].required = True
         self.fields['cliente_direccion'].required = True
-        #self.fields['producto'].required = True
-        #self.fields['cantidad'].required = True
-        # Ordenar las ciudades alfabéticamente
-        self.fields['cliente_ciudad'].choices = sorted(GuiaEnvio.CIUDAD_CHOICES, key=lambda x: x[1])

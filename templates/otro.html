@@ -1,4 +1,522 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selector de Productos Genérico</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="number"] { width: 70px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .img-producto { width: 50px; height: 50px; object-fit: contain; }
+        .dropdown-results {
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+            position: relative; /* O absolute si es necesario posicionarlo de forma más específica */
+            z-index: 1000;
+        }
+        .text-right { text-align: right; }
+        .mt-3 { margin-top: 1rem; } /* Bootstrap-like margin top */
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-sm { padding: 5px 8px; font-size: 0.8em;}
+        .is-invalid { border-color: red; }
+        .invalid-feedback { color: red; font-size: 0.8em; margin-top: 4px; }
+        .separador { height: 20px; } /* Simple separator */
+        .linea-horizontal { border-top: 1px solid #eee; margin: 20px 0;}
+
+        /* Estructura de dos columnas simple */
+        .form-container {
+            display: flex;
+            flex-wrap: wrap; /* Para que en pantallas pequeñas se ponga uno debajo de otro */
+            gap: 20px; /* Espacio entre columnas */
+        }
+        .personal-section, .right-section {
+            flex: 1; /* Que cada columna ocupe el mismo espacio */
+            min-width: 300px; /* Ancho mínimo antes de que se pongan en una sola columna */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Crear Orden</h1>
+
+    <form method="post" action="/tu-endpoint-de-envio" id="miFormulario"> <!-- CAMBIA ACTION -->
+        <!-- Si tu backend requiere un token CSRF y no es Django, tendrás que añadirlo manualmente si es necesario -->
+        <!-- Ejemplo: <input type="hidden" name="_csrf_token" value="TU_TOKEN_AQUI"> -->
+
+        <div class="form-container">
+            <!-- Columna Izquierda: Información Personal (Ejemplo) -->
+            <div class="personal-section">
+                <h2>Información del Cliente</h2>
+                <div class="form-group">
+                    <label for="id_cliente_nombre">Nombre completo *</label>
+                    <input type="text" name="cliente_nombre" id="id_cliente_nombre" value="" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_cliente_telefono">Teléfono *</label>
+                    <input type="text" name="cliente_telefono" id="id_cliente_telefono" value="" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_cliente_ciudad">Ciudad *</label>
+                    <select name="cliente_ciudad" id="id_cliente_ciudad" required>
+                        <option value="">Seleccione una ciudad</option>
+                        <option value="ciudad_a">Ciudad A</option>
+                        <option value="ciudad_b">Ciudad B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_cliente_direccion">Dirección *</label>
+                    <input type="text" name="cliente_direccion" id="id_cliente_direccion" value="" required>
+                </div>
+            </div>
+
+            <!-- Línea separadora -->
+            <div class="linea-horizontal" style="width:100%; display:none;" aria-hidden="true"></div> <!-- Opcional -->
+
+
+            <!-- Columna Derecha: Selección de Producto y Orden -->
+            <div class="right-section">
+                <h2>Detalles de la Orden</h2>
+                <div class="form-group">
+                    <label for="busqueda-producto"><strong>Buscar Producto</strong></label>
+                    <input type="text" id="busqueda-producto" placeholder="Escribe el nombre del producto...">
+                    
+                    <div id="producto-results-container" class="dropdown-results" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Imagen</th>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultados-busqueda-tbody">
+                                <!-- Resultados de búsqueda dinámicos -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="contenedor-productos" class="mt-3">
+                    <h3>Productos Seleccionados</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Imagen</th>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productos-seleccionados-tbody">
+                            <!-- Productos seleccionados aparecerán aquí -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-right"><strong>Total:</strong></td>
+                                <td id="total-compra">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label for="id_contenido"><strong>Contenido de la orden (auto-generado)</strong></label>
+                    <textarea name="contenido" id="id_contenido" readonly rows="3"></textarea>
+                    <small>Este campo se llena automáticamente.</small>
+                </div>
+        
+                <!-- Campos ocultos para enviar los datos de los productos -->
+                <div id="hidden-product-inputs"></div>
+            </div>
+        </div>
+
+        <div class="form-actions text-right mt-3" style="width:100%; text-align:right;">
+            <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
+                Guardar Orden
+            </button>
+            <a href="#" onclick="history.back(); return false;" class="btn" style="background-color: #6c757d; color:white;">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- CONFIGURACIÓN ---
+    const API_PRODUCT_SEARCH_URL = '/api/productos/buscar'; // CAMBIA ESTO a tu endpoint real
+    const MAX_CONTENT_LENGTH = 500; // Max caracteres para el resumen
+    const PLACEHOLDER_IMAGE_URL = 'https://via.placeholder.com/50';
+
+    // --- ESTADO ---
+    let productosSeleccionados = []; // Array para almacenar objetos de producto seleccionados
+
+    // --- SELECTORES DE ELEMENTOS DEL DOM ---
+    const busquedaProductoInput = document.getElementById('busqueda-producto');
+    const productoResultsContainer = document.getElementById('producto-results-container');
+    const resultadosBusquedaTbody = document.getElementById('resultados-busqueda-tbody');
+    const productosSeleccionadosTbody = document.getElementById('productos-seleccionados-tbody');
+    const totalCompraTd = document.getElementById('total-compra');
+    const contenidoOrdenTextarea = document.getElementById('id_contenido');
+    const hiddenProductInputsDiv = document.getElementById('hidden-product-inputs');
+    const miFormulario = document.getElementById('miFormulario');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // --- SIMULACIÓN DE API (REEMPLAZAR CON FETCH REAL) ---
+    async function mockFetchProductos(query) {
+        console.log(`Simulando búsqueda API para: ${query}`);
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const mockData = [
+                    { id: 'prod1', nombre: 'Camiseta Cool', precio: 20.00, imagen: 'https://via.placeholder.com/50/FF0000/FFFFFF?Text=C1' },
+                    { id: 'prod2', nombre: 'Pantalón Jean', precio: 55.50, imagen: 'https://via.placeholder.com/50/00FF00/FFFFFF?Text=P1' },
+                    { id: 'prod3', nombre: 'Zapatos Deportivos', precio: 80.75, imagen: null }, // Sin imagen
+                    { id: 'prod4', nombre: 'Gorra Ajustable', precio: 15.00, imagen: 'https://via.placeholder.com/50/0000FF/FFFFFF?Text=G1' },
+                    { id: 'prod5', nombre: 'Producto muy largo con nombre extenso para probar el truncado', precio: 10.00, imagen: 'https://via.placeholder.com/50/FFFF00/000000?Text=L1' }
+                ];
+                const filtered = mockData.filter(p => p.nombre.toLowerCase().includes(query.toLowerCase()));
+                resolve(filtered);
+            }, 500);
+        });
+    }
+    
+    // --- FUNCIONES DE LÓGICA ---
+
+    function generarContenidoOrden() {
+        let contenido = '';
+        productosSeleccionados.forEach((producto, index) => {
+            const item = `${producto.cantidad}x ${producto.nombre}`;
+            const newEntry = (index > 0 ? ', ' : '') + item;
+
+            if ((contenido.length + newEntry.length) <= MAX_CONTENT_LENGTH) {
+                contenido += newEntry;
+            } else {
+                if (contenido.length < MAX_CONTENT_LENGTH - 3) {
+                    contenido = contenido.substring(0, MAX_CONTENT_LENGTH - newEntry.length - 3) + '...';
+                } else if (!contenido.endsWith("...")) {
+                     contenido = contenido.substring(0, MAX_CONTENT_LENGTH - 3) + '...';
+                }
+                return false; // Salir del forEach si se excede
+            }
+        });
+        contenidoOrdenTextarea.value = contenido;
+    }
+
+    function actualizarTotalYContenido() {
+        let totalGeneral = 0;
+        productosSeleccionados.forEach(producto => {
+            totalGeneral += producto.precio * producto.cantidad;
+        });
+        totalCompraTd.textContent = totalGeneral.toFixed(2);
+        generarContenidoOrden();
+        actualizarCamposOcultos();
+    }
+
+    function actualizarCamposOcultos() {
+        hiddenProductInputsDiv.innerHTML = ''; // Limpiar campos ocultos previos
+        productosSeleccionados.forEach((producto, index) => {
+            // Estos nombres (ej. productos[0][id]) son comunes para backends que esperan arrays de objetos
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = `productos[${index}][id]`;
+            idInput.value = producto.id;
+            hiddenProductInputsDiv.appendChild(idInput);
+
+            const nombreInput = document.createElement('input');
+            nombreInput.type = 'hidden';
+            nombreInput.name = `productos[${index}][nombre]`;
+            nombreInput.value = producto.nombre;
+            hiddenProductInputsDiv.appendChild(nombreInput);
+            
+            const cantidadInput = document.createElement('input');
+            cantidadInput.type = 'hidden';
+            cantidadInput.name = `productos[${index}][cantidad]`;
+            cantidadInput.value = producto.cantidad;
+            hiddenProductInputsDiv.appendChild(cantidadInput);
+
+            const precioInput = document.createElement('input');
+            precioInput.type = 'hidden';
+            precioInput.name = `productos[${index}][precio_unitario]`; // o solo 'precio'
+            precioInput.value = producto.precio;
+            hiddenProductInputsDiv.appendChild(precioInput);
+        });
+    }
+
+    function renderizarProductosSeleccionados() {
+        productosSeleccionadosTbody.innerHTML = ''; // Limpiar tabla
+        
+        productosSeleccionados.forEach((producto, index) => {
+            const subtotal = producto.precio * producto.cantidad;
+            const row = productosSeleccionadosTbody.insertRow();
+            row.innerHTML = `
+                <td><img src="${producto.imagen || PLACEHOLDER_IMAGE_URL}" class="img-producto" onerror="this.src='${PLACEHOLDER_IMAGE_URL}'"></td>
+                <td>${producto.nombre}</td>
+                <td>$${producto.precio.toFixed(2)}</td>
+                <td>
+                    <input type="number" class="cantidad-producto" 
+                           min="1" value="${producto.cantidad}" 
+                           data-index="${index}">
+                </td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm btn-eliminar" 
+                            data-index="${index}">✕</button>
+                </td>
+            `;
+        });
+        
+        // Re-asignar event listeners para los elementos dinámicos
+        document.querySelectorAll('.cantidad-producto').forEach(input => {
+            input.addEventListener('change', handleCantidadChange);
+            input.addEventListener('input', handleCantidadChange); // Para respuesta más inmediata
+        });
+        
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', handleEliminarProducto);
+        });
+        
+        actualizarTotalYContenido();
+    }
+
+    function agregarProductoSeleccionado(id, nombre, imagen, precio) {
+        const existe = productosSeleccionados.some(p => p.id === id);
+        if (existe) {
+            alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
+            return;
+        }
+        
+        productosSeleccionados.push({
+            id: id,
+            nombre: nombre,
+            imagen: imagen || PLACEHOLDER_IMAGE_URL,
+            precio: parseFloat(precio),
+            cantidad: 1
+        });
+        
+        renderizarProductosSeleccionados();
+        productoResultsContainer.style.display = 'none'; // Ocultar resultados
+        busquedaProductoInput.value = ''; // Limpiar búsqueda
+    }
+
+    async function buscarProductos(query) {
+        if (query.length < 2) {
+            productoResultsContainer.style.display = 'none';
+            resultadosBusquedaTbody.innerHTML = '';
+            return;
+        }
+
+        try {
+            // Reemplaza mockFetchProductos con tu fetch real:
+            // const response = await fetch(`${API_PRODUCT_SEARCH_URL}?q=${encodeURIComponent(query)}`);
+            // if (!response.ok) throw new Error('Error en la búsqueda');
+            // const data = await response.json();
+            const data = await mockFetchProductos(query); // Usando el mock
+
+            resultadosBusquedaTbody.innerHTML = '';
+            if (data.length > 0) {
+                data.forEach(producto => {
+                    const row = resultadosBusquedaTbody.insertRow();
+                    row.innerHTML = `
+                        <td><img src="${producto.imagen || PLACEHOLDER_IMAGE_URL}" class="img-producto" onerror="this.src='${PLACEHOLDER_IMAGE_URL}'"></td>
+                        <td>${producto.nombre}</td>
+                        <td>$${parseFloat(producto.precio).toFixed(2)}</td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm btn-agregar-busqueda" 
+                                data-id="${producto.id}"
+                                data-nombre="${producto.nombre.replace(/"/g, '"')}" 
+                                data-imagen="${producto.imagen || ''}"
+                                data-precio="${producto.precio}">
+                                Agregar
+                            </button>
+                        </td>
+                    `;
+                });
+                 // Re-asignar event listeners para los botones de agregar de la búsqueda
+                document.querySelectorAll('.btn-agregar-busqueda').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        agregarProductoSeleccionado(
+                            this.dataset.id,
+                            this.dataset.nombre,
+                            this.dataset.imagen,
+                            this.dataset.precio
+                        );
+                    });
+                });
+                productoResultsContainer.style.display = 'block';
+            } else {
+                resultadosBusquedaTbody.innerHTML = '<tr><td colspan="4">No se encontraron productos.</td></tr>';
+                productoResultsContainer.style.display = 'block'; // Mostrar mensaje de no encontrado
+            }
+        } catch (error) {
+            console.error('Error al buscar productos:', error);
+            resultadosBusquedaTbody.innerHTML = '<tr><td colspan="4">Error al buscar. Intente de nuevo.</td></tr>';
+            productoResultsContainer.style.display = 'block';
+        }
+    }
+
+    // --- MANEJADORES DE EVENTOS ---
+    function handleCantidadChange(e) {
+        const index = parseInt(e.target.dataset.index);
+        let nuevaCantidad = parseInt(e.target.value);
+        if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
+            nuevaCantidad = 1; // Asegurar que la cantidad sea al menos 1
+            e.target.value = nuevaCantidad; // Corregir el valor en el input
+        }
+        productosSeleccionados[index].cantidad = nuevaCantidad;
+        renderizarProductosSeleccionados(); // Re-renderiza para actualizar subtotal y total
+    }
+
+    function handleEliminarProducto(e) {
+        const index = parseInt(e.target.dataset.index);
+        productosSeleccionados.splice(index, 1);
+        renderizarProductosSeleccionados();
+    }
+
+    // Validación del formulario de cliente
+    function validarCamposCliente() {
+        let isValid = true;
+        const requiredFields = [
+            'id_cliente_nombre', 
+            'id_cliente_telefono',
+            'id_cliente_ciudad',
+            'id_cliente_direccion'
+        ]; 
+
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const errorDiv = field.nextElementSibling && field.nextElementSibling.classList.contains('invalid-feedback') 
+                           ? field.nextElementSibling 
+                           : null;
+            
+            // Remover feedback anterior
+            if (errorDiv) errorDiv.remove();
+            field.classList.remove('is-invalid');
+
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+                const newErrorDiv = document.createElement('div');
+                newErrorDiv.className = 'invalid-feedback';
+                newErrorDiv.textContent = 'Este campo es requerido.';
+                field.parentNode.insertBefore(newErrorDiv, field.nextSibling);
+            }
+        });
+        return isValid;
+    }
+
+    // --- INICIALIZACIÓN Y EVENT LISTENERS GLOBALES ---
+    let searchTimeout;
+    busquedaProductoInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            buscarProductos(this.value);
+        }, 300); // Debounce: esperar 300ms después de dejar de escribir
+    });
+
+    // Ocultar resultados de búsqueda al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!productoResultsContainer.contains(e.target) && e.target !== busquedaProductoInput) {
+            productoResultsContainer.style.display = 'none';
+        }
+    });
+
+    miFormulario.addEventListener('submit', function(e) {
+        const clienteValido = validarCamposCliente();
+
+        if (!clienteValido) {
+            e.preventDefault();
+            alert('Por favor complete todos los campos de cliente requeridos.');
+            // Scroll al primer campo inválido si es necesario
+            const firstInvalid = document.querySelector('.is-invalid');
+            if (firstInvalid) firstInvalid.focus();
+            return;
+        }
+
+        if (productosSeleccionados.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un producto a la orden.');
+            busquedaProductoInput.focus();
+            return;
+        }
+        
+        // Si todo es válido, el formulario se enviará.
+        // Opcional: deshabilitar botón para evitar doble envío
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Guardando...'; // O un spinner
+        // El formulario se enviará normalmente si no hay e.preventDefault()
+    });
+
+    // Cargar productos iniciales si es necesario (ej. al editar una orden)
+    // const initialProductsData = [
+    //     { id: 'prod1', nombre: 'Camiseta Cool', precio: 20.00, imagen: 'url_imagen1', cantidad: 2 },
+    // ];
+    // if (initialProductsData && initialProductsData.length > 0) {
+    //     productosSeleccionados = initialProductsData;
+    //     renderizarProductosSeleccionados();
+    // }
+    
+    // Render inicial si hay productos (aunque aquí empieza vacío)
+    renderizarProductosSeleccionados();
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 {% extends 'base.html' %}
 
 {% block title %}Crear Guía de Envío{% endblock %}

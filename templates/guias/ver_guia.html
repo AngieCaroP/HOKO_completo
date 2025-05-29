@@ -3,213 +3,125 @@
 {% block title %}Guía #{{ guia.id }} - HOKO{% endblock %}
 
 {% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h4 mb-0">Guía de Envío #{{ guia.id }}</h1>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Información del Cliente</h4>
+                    <p><strong>Nombre:</strong> {{ guia.cliente_nombre }}</p>
+                    <p><strong>Teléfono:</strong> {{ guia.cliente_telefono }}</p>
+                    <p><strong>Ciudad:</strong> {{ guia.get_cliente_ciudad_display }}</p>
+                    <p><strong>Dirección:</strong> {{ guia.cliente_direccion|linebreaksbr }}</p>
+                    {% if guia.cliente_direccion2 %}
+                    <p><strong>Dirección secundaria:</strong> {{ guia.cliente_direccion2|linebreaksbr }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h4>Detalles del Envío</h4>
+                    <p><strong>Código de seguimiento:</strong> {{ guia.codigo_seguimiento }}</p>
+                    <p><strong>Estado:</strong> <span class="badge bg-info text-dark">{{ guia.get_estado_display }}</span></p>
+                    <p><strong>Fecha creación:</strong> {{ guia.fecha_creacion|date:"d/m/Y H:i:s" }}</p>
+                    <p><strong>Última actualización:</strong> {{ guia.fecha_actualizacion|date:"d/m/Y H:i:s" }}</p>
+                     {% if guia.observaciones %}
+                        <p><strong>Observaciones:</strong> {{ guia.observaciones|linebreaksbr }}</p>
+                    {% endif %}
+                </div>
+            </div>
 
-<h1>Guía de Envío #{{ guia.id }}</h1>
+            {% if guia.producto %}
+            <hr>
+            <h4>Producto Principal</h4>
+             <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio Unitario</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            {% if guia.producto.imagen %}
+                                <img src="{{ guia.producto.imagen.url }}" alt="{{ guia.producto.nombre }}" class="img-thumbnail mr-2" style="width: 50px; height: 50px; object-fit: contain;">
+                            {% endif %}
+                            {{ guia.producto.nombre }}
+                        </td>
+                        <td>${{ guia.producto.precio|floatformat:2 }}</td>
+                        <td>{{ guia.cantidad }}</td>
+                        <td>${{ guia.producto.precio|stringformat:".2f"|add:0|default:0.00|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endif %}
 
-<div class="row">
-    <div class="col-md-6">
-        <h3>Información del Cliente</h3>
-        <p><strong>Nombre:</strong> {{ guia.cliente_nombre }}</p>
-        <p><strong>Teléfono:</strong> {{ guia.cliente_telefono }}</p>
-        <p><strong>Ciudad:</strong> {{ guia.get_cliente_ciudad_display }}</p>
-        <p><strong>Dirección:</strong> {{ guia.cliente_direccion }}</p>
-        {% if guia.cliente_direccion2 %}
-        <p><strong>Dirección secundaria:</strong> {{ guia.cliente_direccion2 }}</p>
-        {% endif %}
-    </div>
-    
-    <div class="col-md-6">
-        <h3>Detalles del Envío</h3>
-        <p><strong>Código de seguimiento:</strong> {{ guia.codigo_seguimiento }}</p>
-        <p><strong>Estado:</strong> {{ guia.get_estado_display }}</p>
-        <p><strong>Fecha creación:</strong> {{ guia.fecha_creacion }}</p>
-        <p><strong>Última actualización:</strong> {{ guia.fecha_actualizacion }}</p>
+
+            {% if guia.items_guia.all %}
+                <hr>
+                <h4>Productos Detallados en la Guía (Tabla)</h4>
+                {% if guia.contenido_resumen %}
+                    <p class="text-muted"><small>Resumen: {{ guia.contenido_resumen }}</small></p>
+                {% endif %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Imagen</th>
+                                <th>Producto</th>
+                                <th>Precio Unitario (Guía)</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in guia.items_guia.all %}
+                            <tr>
+                                <td>
+                                    {% if item.producto.imagen %}
+                                        <img src="{{ item.producto.imagen.url }}" alt="{{ item.producto.nombre }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: contain;">
+                                    {% else %}
+                                        <img src="https://via.placeholder.com/60" alt="Sin imagen" class="img-thumbnail">
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.producto.nombre }}</td>
+                                <td>${{ item.precio_unitario_en_guia|floatformat:2 }}</td>
+                                <td>{{ item.cantidad }}</td>
+                                <td>${{ item.subtotal|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="4" class="text-end"><strong>Total Guía (Tabla):</strong></td>
+                                <td class="fw-bold">${{ guia.total_guia|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            {% else %}
+                 <hr>
+                <p class="text-center text-muted">No hay productos detallados en la tabla para esta guía.</p>
+            {% endif %}
+
+
+            <div class="mt-4 d-flex justify-content-between">
+                <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver al Listado
+                </a>
+                <a href="{% url 'editar_guia' guia.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Editar Guía
+                </a>
+            </div>
+        </div>
     </div>
 </div>
-
-<h3>Productos</h3>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th>Precio Unitario</th>
-            <th>Cantidad</th>
-            <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for producto in productos %}
-        <tr>
-            <td>{{ producto.producto.nombre }}</td>
-            <td>${{ producto.precio_unitario }}</td>
-            <td>{{ producto.cantidad }}</td>
-            <td>${{ producto.subtotal }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-    <tfoot>
-        <tr>
-            <td colspan="3" class="text-right"><strong>Total:</strong></td>
-            <td><strong>${{ guia.total }}</strong></td>
-        </tr>
-    </tfoot>
-</table>
-
-<a href="{% url 'listar_guias' %}" class="btn btn-secondary">Volver</a>
-{% endblock %}
-
 <style>
-    body {
-        background-color: #f9fafb;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #333;
-    }
-
-    .container {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-    }
-
-    h1 {
-        font-size: 2rem;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 1.5rem;
-        color: #0d6efd;
-    }
-
-    .card {
-        background-color: white;
-        border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        margin-bottom: 2rem;
-    }
-
-    .card-header {
-        background-color: #f1f1f1;
-        border-bottom: 1px solid #ddd;
-        padding: 1rem;
-        font-weight: 600;
-    }
-
-    .badge {
-        padding: 0.5rem 1rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 0.5rem;
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    input[type="text"],
-    input[type="number"],
-    select,
-    textarea {
-        width: 100%;
-        padding: 0.6rem 1rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.5rem;
-        background-color: #fff;
-        font-size: 1rem;
-        transition: border-color 0.3s, box-shadow 0.3s;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-        outline: none;
-    }
-
-    .form-actions {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .btn {
-        padding: 0.6rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 500;
-        border: none;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        transition: background-color 0.3s, transform 0.2s;
-    }
-
-    .btn-primary {
-        background-color: #0d6efd;
-        color: #fff;
-    }
-
-    .btn-primary:hover {
-        background-color: #0b5ed7;
-        transform: translateY(-1px);
-    }
-
-    .btn-secondary {
-        background-color: #f1f1f1;
-        color: #333;
-    }
-
-    .btn-secondary:hover {
-        background-color: #e2e2e2;
-        transform: translateY(-1px);
-    }
-
-    .btn-danger {
-        background-color: #dc3545;
-        color: #fff;
-    }
-
-    .btn-danger:hover {
-        background-color: #c82333;
-        transform: translateY(-1px);
-    }
-
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .table-bordered th, .table-bordered td {
-        padding: 1rem;
-        border: 1px solid #ddd;
-    }
-
-    .table th {
-        background-color: #f8f9fa;
-    }
-
-    @media (max-width: 768px) {
-        .form-actions {
-            flex-direction: column;
-        }
-
-        .btn {
-            width: 100%;
-        }
-
-        .row {
-            flex-direction: column;
-        }
-
-        .card-header {
-            text-align: center;
-        }
-    }
+    body { background-color: #f8f9fa; }
+    .card-header h1 { font-size: 1.5rem; }
 </style>
-
 {% endblock %}
