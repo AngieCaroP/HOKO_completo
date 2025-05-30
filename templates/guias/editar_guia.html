@@ -1,481 +1,199 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Crear Guía de Envío{% endblock %}
+{% block title %}Editar Guía #{{ form.instance.id|default:guia.id }} - HOKO{% endblock %}
 
 {% block content %}
-<h1>Crear Guía de Envío</h1>
+<div class="container mt-4">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h1 class="h4 mb-0">Editar Guía de Envío #{{ form.instance.id|default:guia.id }}</h1>
+            </div>
+            <div class="card-body">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-4">
+                        {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show mb-4" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
 
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    {% endfor %}
-{% endif %}
-{% if form.non_field_errors %}
-    <div class="alert alert-danger">
-        {% for error in form.non_field_errors %}
-            <p>{{ error }}</p>
-        {% endfor %}
-    </div>
-{% endif %}
-{% if error_productos %}
-    <div class="alert alert-danger">
-        Hubo un error con los productos seleccionados en la tabla. Por favor, verifica los datos.
-    </div>
-{% endif %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h4>Información del Cliente</h4>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_nombre.id_for_label }}" class="form-label">{{ form.cliente_nombre.label }} *</label>
+                            {{ form.cliente_nombre }}
+                            {% for error in form.cliente_nombre.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_telefono.id_for_label }}" class="form-label">{{ form.cliente_telefono.label }} *</label>
+                            {{ form.cliente_telefono }}
+                            {% for error in form.cliente_telefono.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_ciudad.id_for_label }}" class="form-label">{{ form.cliente_ciudad.label }} *</label>
+                            {{ form.cliente_ciudad }}
+                            {% for error in form.cliente_ciudad.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                         <div class="form-group mb-3">
+                            <label for="{{ form.cliente_direccion.id_for_label }}" class="form-label">{{ form.cliente_direccion.label }} *</label>
+                            {{ form.cliente_direccion }}
+                            {% for error in form.cliente_direccion.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_direccion2.id_for_label }}" class="form-label">{{ form.cliente_direccion2.label }}</label>
+                            {{ form.cliente_direccion2 }}
+                            {% for error in form.cliente_direccion2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
 
+                    <div class="col-md-6">
+                        <h4>Detalles del Envío</h4>
+                        {# Campos para producto y cantidad PRINCIPALES (si existen en GuiaEnvioForm) #}
+                        {% if form.producto %}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.producto.id_for_label }}" class="form-label">{{ form.producto.label }} *</label>
+                            {{ form.producto }}
+                            {% for error in form.producto.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if form.cantidad %}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">{{ form.cantidad.label }} *</label>
+                            {{ form.cantidad }}
+                            {% for error in form.cantidad.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
 
-<form method="post" class="form-container-grid" id="miFormulario"> {# Cambié a un ID que uso en el JS de validación #}
-    {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }} *</label>
+                            {{ form.estado }}
+                            {% for error in form.estado.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.contenido_resumen.id_for_label }}" class="form-label">{{ form.contenido_resumen.label }}</label>
+                            {{ form.contenido_resumen }} {# Tiene id="id_contenido" y readonly por el widget #}
+                            {% for error in form.contenido_resumen.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                            {% if form.contenido_resumen.help_text %}
+                                <small class="form-text text-muted">{{ form.contenido_resumen.help_text }}</small>
+                            {% else %}
+                                <small class="form-text text-muted">Se actualiza al guardar si hay producto/cantidad.</small>
+                            {% endif %}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label">{{ form.observaciones.label }}</label>
+                            {{ form.observaciones }}
+                            {% for error in form.observaciones.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Columna Izquierda: Información Personal -->
-    <div class="personal-section">
-        <h4>Información del Cliente</h4>
-        <div class="form-group">
-            <label for="{{ form.cliente_nombre.id_for_label }}">Nombre completo *</label>
-            {{ form.cliente_nombre }}
-            {% if form.cliente_nombre.errors %}<div class="invalid-feedback d-block">{{ form.cliente_nombre.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-            <label for="{{ form.cliente_telefono.id_for_label }}">Teléfono *</label>
-            {{ form.cliente_telefono }}
-            {% if form.cliente_telefono.errors %}<div class="invalid-feedback d-block">{{ form.cliente_telefono.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-            <label for="{{ form.cliente_ciudad.id_for_label }}">Ciudad *</label>
-            {{ form.cliente_ciudad }}
-            {% if form.cliente_ciudad.errors %}<div class="invalid-feedback d-block">{{ form.cliente_ciudad.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-            <label for="{{ form.cliente_direccion.id_for_label }}">Dirección *</label>
-            {{ form.cliente_direccion }}
-            {% if form.cliente_direccion.errors %}<div class="invalid-feedback d-block">{{ form.cliente_direccion.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-            <label for="{{ form.cliente_direccion2.id_for_label }}">Dirección secundaria</label>
-            {{ form.cliente_direccion2 }}
-        </div>
-        <div class="form-group">
-            <label for="{{ form.observaciones.id_for_label }}">Observaciones</label>
-            {{ form.observaciones }}
-        </div>
-        {# El estado se maneja oculto y/o en la vista/form por defecto #}
-        {{ form.estado.as_hidden }}
-    </div>
-
-    <!-- Columna Derecha: Selección de Producto y Orden -->
-    <div class="right-section">
-        <h4>Productos Detallados en la Guía</h4>
-        <div class="form-group">
-            <label for="busqueda-producto-crear"><strong>Buscar Producto para Añadir</strong></label>
-            <input type="text" id="busqueda-producto-crear" class="form-control" placeholder="Escribe nombre o referencia...">
-            
-            <div id="producto-results-crear" class="dropdown-results" style="display: none; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; background: white; position: absolute; z-index:100; width: calc(100% - 30px);">
-                 <table class="table table-sm table-hover">
-                    <tbody id="resultados-busqueda-tbody-crear">
-                        <!-- Resultados de búsqueda dinámicos -->
-                    </tbody>
-                </table>
+                <hr class="mt-4 mb-4">
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'ver_guia' form.instance.id|default:guia.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
             </div>
         </div>
-
-        <div id="contenedor-productos-crear" class="mt-3">
-            <h5>Productos Seleccionados</h5>
-            <table class="table table-striped table-bordered table-sm">
-                <thead>
-                    <tr>
-                        <th>Imagen</th>
-                        <th>Producto</th>
-                        <th style="width:15%;">Precio U.</th>
-                        <th style="width:15%;">Cantidad</th>
-                        <th style="width:15%;">Subtotal</th>
-                        <th style="width:10%;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody id="productos-seleccionados-tbody-crear">
-                    <!-- Productos seleccionados aparecerán aquí -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4" class="text-right"><strong>Total Tabla:</strong></td>
-                        <td id="total-compra-crear" style="font-weight: bold;">$0.00</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div id="hidden-product-inputs-crear"></div> {# Para los inputs hidden de productos #}
-        </div>
-
-        <div class="form-group mt-3">
-            <label for="{{ form.contenido_resumen.id_for_label }}"><strong>Contenido (Resumen Autogenerado de Tabla)</strong></label>
-            {{ form.contenido_resumen }}
-            {% if form.contenido_resumen.errors %}<div class="invalid-feedback d-block">{{ form.contenido_resumen.errors|join:", " }}</div>{% endif %}
-            <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados en la tabla.</small>
-        </div>
-    </div>
-
-    <!-- Botones -->
-    <div class="form-actions text-right mt-4" style="grid-column: 1 / -1;"> {# Ocupa todas las columnas en grid #}
-        <button type="submit" name="guardar" class="btn btn-primary" id="submitBtnCrear">
-            <i class="fas fa-save"></i> Guardar Guía
-        </button>
-        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">
-            <i class="fas fa-times"></i> Cancelar
-        </a>
-    </div>
-</form>
+    </form>
+</div>
 
 <style>
-    .form-container-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Dos columnas de igual tamaño */
-        gap: 30px; /* Espacio entre columnas */
-        align-items: start; /* Alinea los items al inicio de su celda de grid */
-    }
-    .personal-section, .right-section {
-        /* Ya no necesitan flex:1, el grid se encarga */
-        padding: 15px;
-        border: 1px solid #e0e0e0;
-        border-radius: 5px;
-        background-color: #f9f9f9;
-    }
-    .form-group { margin-bottom: 1rem; }
-    .img-producto { width: 40px; height: 40px; object-fit: contain; border-radius: 3px; }
-    .dropdown-results .table-sm td, .dropdown-results .table-sm th { padding: 0.3rem; font-size: 0.9em; }
-    .invalid-feedback.d-block { display: block !important; font-size: 0.875em; color: #dc3545; margin-top: .25rem; }
-    .table-sm td, .table-sm th { padding: 0.4rem; }
-    .form-actions { text-align: right; }
+    /* --- ESTILOS (LOS MISMOS QUE ANTES, PERO SIN LOS ESPECFÍCOS DEL FORMSET) --- */
+    /* --- Base Card and Header Styles --- */
+    .container.mt-4 > .card.shadow-sm { border: none; border-radius: 10px; }
+    .container.mt-4 > .card > .card-header.bg-primary { background-color: #070E27 !important; color: white; border-bottom: 1px solid #1E3A8A; border-top-left-radius: 10px; border-top-right-radius: 10px; padding: 1rem 1.5rem; }
+    .container.mt-4 > .card > .card-header h1.h4 { font-family: 'Noto Sans', sans-serif; font-size: 1.75rem; font-weight: bold; color: white; }
+    .container.mt-4 > .card > .card-body { padding: 2rem; }
+    .container.mt-4 > .card > .card-body h4 { font-family: 'Noto Sans', sans-serif; font-size: 1.25rem; color: #070E27; margin-top: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #070E27; }
+    .container.mt-4 > .card > .card-body h4:first-of-type { margin-top: 0; }
 
-    @media (max-width: 992px) { /* Para tablets y móviles */
-        .form-container-grid {
-            grid-template-columns: 1fr; /* Una sola columna */
-        }
-    }
-    /* Estilos para que los errores del formulario Django se vean bien */
-    .form-control.is-invalid, .was-validated .form-control:invalid {
-        border-color: #dc3545;
-        padding-right: calc(1.5em + .75rem);
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5zM6 8.2h.1v.1H6z'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right calc(.375em + .1875rem) center;
-        background-size: calc(.75em + .375rem) calc(.75em + .375rem);
-    }
-    .form-select.is-invalid, .was-validated .form-select:invalid {
-        border-color: #dc3545;
-    }
-    .invalid-feedback {
-        display: none;
-        width: 100%;
-        margin-top: .25rem;
-        font-size: .875em;
-        color: #dc3545;
-    }
-    .form-control.is-invalid ~ .invalid-feedback,
-    .form-select.is-invalid ~ .invalid-feedback {
-        display: block;
-    }
+    /* --- Form Element Styling --- */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label { display: block; font-weight: 600; color: #070E27; margin-bottom: .5rem; font-size: 0.95rem; }
+    .form-control, .form-select { display: block; width: 100%; padding: .5rem .75rem; font-size: 1rem; font-weight: 400; line-height: 1.5; color: #212529; background-color: #fff; background-clip: padding-box; border: 1px solid #ced4da; -webkit-appearance: none; -moz-appearance: none; appearance: none; border-radius: 5px; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }
+    .form-control:focus, .form-select:focus { border-color: #1E3A8A; outline: 0; box-shadow: 0 0 0 .2rem rgba(30, 58, 138,.25); }
+    textarea.form-control { min-height: 80px; }
+    .invalid-feedback.d-block { display: block !important; width: 100%; margin-top: .25rem; font-size: .875em; color: #DC3545; }
+    .form-control.is-invalid, .form-select.is-invalid { border-color: #DC3545; }
+    .form-control.is-invalid:focus, .form-select.is-invalid:focus { box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25); }
+
+    /* --- Horizontal Rule --- */
+    .container.mt-4 > .card > .card-body hr { border-top: 1px solid #ccc; }
+
+    /* --- Action Buttons --- */
+    .container.mt-4 > .card .mt-4.d-flex { padding-top: 1.5rem; }
+    .container.mt-4 > .card .btn { padding: 0.6rem 1.2rem; font-size: 0.95rem; border-radius: 8px; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none; vertical-align: middle; white-space: nowrap; }
+    .container.mt-4 > .card .btn:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .container.mt-4 > .card .btn i { margin-right: 0.5em; }
+    .container.mt-4 > .card .btn-secondary { background-color: #6c757d; border-color: #6c757d; color: white; }
+    .container.mt-4 > .card .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
+    .container.mt-4 > .card .btn-success { background-color: #198754; border-color: #198754; color: white; }
+    .container.mt-4 > .card .btn-success:hover { background-color: #157347; border-color: #146c43; }
+
+    /* --- Bootstrap Helper Classes --- */
+    .row { display: flex; flex-wrap: wrap; margin-top: calc(-1 * var(--bs-gutter-y, 0)); margin-right: calc(-.5 * var(--bs-gutter-x, 1.5rem)); margin-left: calc(-.5 * var(--bs-gutter-x, 1.5rem)); }
+    .row > * { flex-shrink: 0; width: 100%; max-width: 100%; padding-right: calc(var(--bs-gutter-x, 1.5rem) * .5); padding-left: calc(var(--bs-gutter-x, 1.5rem) * .5); margin-top: var(--bs-gutter-y, 0); }
+    .col-md-6 { flex: 0 0 auto; width: 50%; }
+    .mb-3 { margin-bottom: 1rem !important; } .mb-4 { margin-bottom: 1.5rem !important; } .mt-4 { margin-top: 1.5rem !important; }
+    .alert { position: relative; padding: 1rem 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: .25rem; }
+    .alert-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+    .alert-info { color: #052c65; background-color: #cfe2ff; border-color: #b6d4fe;}
+    .alert-success { color: #0a3622; background-color: #d1e7dd; border-color: #badbcc;}
+    .btn-close { box-sizing: content-box; width: 1em; height: 1em; padding: .25em .25em; color: #000; background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat; border:0; border-radius:.25rem; opacity:.5; float: right; }
+    .btn-close:hover { opacity: .75; }
+    .text-muted { color: #6c757d !important; } .form-text { margin-top: .25rem; font-size: .875em; color: #6c757d;}
 </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block javascript %}
+{# Si usas la Opción 2 y quieres que contenido_resumen se actualice dinámicamente en el frontend #}
+{# basado en los campos form.producto y form.cantidad (principales) #}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- CONFIGURACIÓN ---
-    const API_PRODUCT_SEARCH_URL_CREAR = "{% url 'search_productos_api' %}";
-    const MAX_CONTENT_LENGTH_CREAR = 495; // Max caracteres para el resumen
-    const PLACEHOLDER_IMAGE_URL_CREAR = 'https://via.placeholder.com/40';
+    const productoSelect = document.querySelector('select[name="producto"]'); // Asume que el campo se llama 'producto'
+    const cantidadInput = document.querySelector('input[name="cantidad"]'); // Asume que el campo se llama 'cantidad'
+    const contenidoResumenInput = document.getElementById('id_contenido'); // El ID de tu widget
 
-    // --- ESTADO ---
-    let productosSeleccionadosCrear = [];
+    function updateSimpleContenidoResumen() {
+        if (!productoSelect || !cantidadInput || !contenidoResumenInput) return;
 
-    // --- SELECTORES DE ELEMENTOS DEL DOM ---
-    const busquedaProductoInputCrear = document.getElementById('busqueda-producto-crear');
-    const productoResultsContainerCrear = document.getElementById('producto-results-crear');
-    const resultadosBusquedaTbodyCrear = document.getElementById('resultados-busqueda-tbody-crear');
-    const productosSeleccionadosTbodyCrear = document.getElementById('productos-seleccionados-tbody-crear');
-    const totalCompraTdCrear = document.getElementById('total-compra-crear');
-    const contenidoResumenTextareaCrear = document.getElementById('{{ form.contenido_resumen.id_for_label }}'); // id_contenido
-    const hiddenProductInputsDivCrear = document.getElementById('hidden-product-inputs-crear');
-    const formularioPrincipalCrear = document.getElementById('miFormulario');
-    const submitBtnCrear = document.getElementById('submitBtnCrear');
+        let resumen = "";
+        const productoNombre = productoSelect.options[productoSelect.selectedIndex]?.text;
+        const cantidad = cantidadInput.value;
 
-    // --- FUNCIONES DE LÓGICA ---
-    function generarContenidoResumenCrear() {
-        if (!contenidoResumenTextareaCrear) return;
-        let contenido = '';
-        productosSeleccionadosCrear.forEach((producto, index) => {
-            const item = `${producto.cantidad}x ${producto.nombre}`;
-            const newEntry = (index > 0 ? ', ' : '') + item;
-
-            if ((contenido.length + newEntry.length) <= MAX_CONTENT_LENGTH_CREAR) {
-                contenido += newEntry;
-            } else {
-                if (contenido.length < MAX_CONTENT_LENGTH_CREAR - 3 && !contenido.endsWith("...")) {
-                     contenido = contenido.substring(0, MAX_CONTENT_LENGTH_CREAR - newEntry.length - 3) + '...';
-                } else if (!contenido.endsWith("...")) {
-                     contenido = contenido.substring(0, MAX_CONTENT_LENGTH_CREAR - 3) + '...';
-                }
-                return false; 
-            }
-        });
-        contenidoResumenTextareaCrear.value = contenido;
-    }
-
-    function actualizarTotalYContenidoCrear() {
-        let totalGeneral = 0;
-        productosSeleccionadosCrear.forEach(producto => {
-            totalGeneral += parseFloat(producto.precio) * parseInt(producto.cantidad);
-        });
-        if(totalCompraTdCrear) totalCompraTdCrear.textContent = '$' + totalGeneral.toFixed(2);
-        generarContenidoResumenCrear();
-        actualizarCamposOcultosCrear();
-    }
-
-    function actualizarCamposOcultosCrear() {
-        if (!hiddenProductInputsDivCrear) return;
-        hiddenProductInputsDivCrear.innerHTML = '';
-        productosSeleccionadosCrear.forEach((producto, index) => {
-            const fields = {
-                'id': producto.id,
-                'nombre': producto.nombre,
-                'cantidad': producto.cantidad,
-                'precio': parseFloat(producto.precio) // Enviar el precio de la tabla
-            };
-            for (const key in fields) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = `productos[${index}][${key}]`;
-                input.value = fields[key];
-                hiddenProductInputsDivCrear.appendChild(input);
-            }
-        });
-    }
-
-    function renderizarProductosSeleccionadosCrear() {
-        if (!productosSeleccionadosTbodyCrear) return;
-        productosSeleccionadosTbodyCrear.innerHTML = '';
-        
-        productosSeleccionadosCrear.forEach((producto, index) => {
-            const subtotal = parseFloat(producto.precio) * parseInt(producto.cantidad);
-            const row = productosSeleccionadosTbodyCrear.insertRow();
-            row.dataset.productoId = producto.id;
-            row.innerHTML = `
-                <td><img src="${producto.imagen || PLACEHOLDER_IMAGE_URL_CREAR}" class="img-producto" onerror="this.src='${PLACEHOLDER_IMAGE_URL_CREAR}'"></td>
-                <td>${producto.nombre}</td>
-                <td>$${parseFloat(producto.precio).toFixed(2)}</td>
-                <td>
-                    <input type="number" class="form-control form-control-sm cantidad-producto-crear" 
-                           min="1" value="${producto.cantidad}" 
-                           data-index="${index}" required style="width: 60px;">
-                </td>
-                <td>$${subtotal.toFixed(2)}</td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm btn-eliminar-crear" 
-                            data-index="${index}" title="Eliminar de la tabla">✕</button>
-                </td>
-            `;
-        });
-        
-        document.querySelectorAll('.cantidad-producto-crear').forEach(input => {
-            input.addEventListener('change', handleCantidadChangeCrear);
-            input.addEventListener('input', handleCantidadChangeCrear); 
-        });
-        
-        document.querySelectorAll('.btn-eliminar-crear').forEach(btn => {
-            btn.addEventListener('click', handleEliminarProductoCrear);
-        });
-        
-        actualizarTotalYContenidoCrear();
-    }
-
-    function agregarProductoSeleccionadoCrear(id, nombre, imagen, precio) {
-        const existe = productosSeleccionadosCrear.some(p => p.id.toString() === id.toString());
-        if (existe) {
-            alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
-            return;
+        if (productoNombre && productoNombre !== "---------" && cantidad && parseFloat(cantidad) > 0) {
+            resumen = `${cantidad} x ${productoNombre.split('(')[0].trim()}`;
+        } else if (productoNombre && productoNombre !== "---------") {
+            resumen = `Producto: ${productoNombre.split('(')[0].trim()}`;
         }
-        
-        productosSeleccionadosCrear.push({
-            id: id.toString(),
-            nombre: nombre,
-            imagen: imagen || PLACEHOLDER_IMAGE_URL_CREAR,
-            precio: parseFloat(precio), // Guardar el precio del API al agregar
-            cantidad: 1
-        });
-        
-        renderizarProductosSeleccionadosCrear();
-        if(productoResultsContainerCrear) productoResultsContainerCrear.style.display = 'none';
-        if(busquedaProductoInputCrear) busquedaProductoInputCrear.value = '';
+        contenidoResumenInput.value = resumen;
     }
 
-    async function buscarProductosDesdeAPICrear(query) {
-        if (!resultadosBusquedaTbodyCrear || !productoResultsContainerCrear) return;
-        if (query.length < 2) {
-            productoResultsContainerCrear.style.display = 'none';
-            resultadosBusquedaTbodyCrear.innerHTML = '';
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_PRODUCT_SEARCH_URL_CREAR}?search=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error(`Error en la búsqueda: ${response.statusText}`);
-            const data = await response.json();
-
-            resultadosBusquedaTbodyCrear.innerHTML = '';
-            if (data.length > 0) {
-                data.forEach(producto => {
-                    const row = resultadosBusquedaTbodyCrear.insertRow();
-                    row.innerHTML = `
-                        <td><img src="${producto.imagen || PLACEHOLDER_IMAGE_URL_CREAR}" class="img-producto" style="width:30px;height:30px;" onerror="this.src='${PLACEHOLDER_IMAGE_URL_CREAR}'"></td>
-                        <td>${producto.nombre}</td>
-                        <td>$${parseFloat(producto.precio).toFixed(2)}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-success btn-agregar-busqueda-crear" 
-                                data-id="${producto.id}"
-                                data-nombre="${producto.nombre.replace(/"/g, '"')}" 
-                                data-imagen="${producto.imagen || ''}"
-                                data-precio="${producto.precio}">
-                                +
-                            </button>
-                        </td>
-                    `;
-                });
-                document.querySelectorAll('.btn-agregar-busqueda-crear').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        agregarProductoSeleccionadoCrear(
-                            this.dataset.id, this.dataset.nombre,
-                            this.dataset.imagen, this.dataset.precio
-                        );
-                    });
-                });
-                productoResultsContainerCrear.style.display = 'block';
-            } else {
-                resultadosBusquedaTbodyCrear.innerHTML = '<tr><td colspan="4">No se encontraron productos.</td></tr>';
-                productoResultsContainerCrear.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error al buscar productos:', error);
-            if(resultadosBusquedaTbodyCrear) resultadosBusquedaTbodyCrear.innerHTML = '<tr><td colspan="4">Error al buscar. Intente de nuevo.</td></tr>';
-            if(productoResultsContainerCrear) productoResultsContainerCrear.style.display = 'block';
-        }
+    if (productoSelect) {
+        productoSelect.addEventListener('change', updateSimpleContenidoResumen);
+    }
+    if (cantidadInput) {
+        cantidadInput.addEventListener('input', updateSimpleContenidoResumen);
     }
 
-    // --- MANEJADORES DE EVENTOS ---
-    function handleCantidadChangeCrear(e) {
-        const index = parseInt(e.target.dataset.index);
-        let nuevaCantidad = parseInt(e.target.value);
-        if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
-            nuevaCantidad = 1;
-            e.target.value = nuevaCantidad;
-        }
-        productosSeleccionadosCrear[index].cantidad = nuevaCantidad;
-        renderizarProductosSeleccionadosCrear();
-    }
-
-    function handleEliminarProductoCrear(e) {
-        const index = parseInt(e.target.dataset.index);
-        productosSeleccionadosCrear.splice(index, 1);
-        renderizarProductosSeleccionadosCrear();
-    }
-
-    // Validación de campos de cliente del formulario Django
-    function validarFormularioClienteCrear() {
-        let isValid = true;
-        const form = document.getElementById('miFormulario');
-        if (!form) return true; // Si no hay formulario, no validar
-
-        // Campos requeridos por tu GuiaEnvioForm
-        const requiredDjangoFields = ['cliente_nombre', 'cliente_telefono', 'cliente_ciudad', 'cliente_direccion'];
-        
-        requiredDjangoFields.forEach(fieldName => {
-            const field = form.elements[fieldName]; // Más robusto para obtener campos de formulario
-            if (field) {
-                const parentGroup = field.closest('.form-group');
-                let errorDiv = parentGroup ? parentGroup.querySelector('.invalid-feedback.js-error') : null;
-
-                if (errorDiv) errorDiv.remove();
-                field.classList.remove('is-invalid');
-
-                if ((field.type === 'select-one' && !field.value) || (field.type !== 'select-one' && !field.value.trim())) {
-                    isValid = false;
-                    field.classList.add('is-invalid');
-                    if (parentGroup && !parentGroup.querySelector('.invalid-feedback.d-block')) { // No añadir si ya hay error de Django
-                        const newErrorDiv = document.createElement('div');
-                        newErrorDiv.className = 'invalid-feedback js-error d-block'; // js-error para diferenciar de errores de Django
-                        newErrorDiv.textContent = 'Este campo es requerido.';
-                        field.parentNode.insertBefore(newErrorDiv, field.nextSibling);
-                    }
-                }
-            }
-        });
-        return isValid;
-    }
-
-    // --- INICIALIZACIÓN Y EVENT LISTENERS GLOBALES ---
-    if (busquedaProductoInputCrear) {
-        let searchTimeoutCrear;
-        busquedaProductoInputCrear.addEventListener('input', function() {
-            clearTimeout(searchTimeoutCrear);
-            searchTimeoutCrear = setTimeout(() => {
-                buscarProductosDesdeAPICrear(this.value);
-            }, 300);
-        });
-    }
-
-    document.addEventListener('click', function(e) {
-        if (productoResultsContainerCrear && !productoResultsContainerCrear.contains(e.target) && e.target !== busquedaProductoInputCrear) {
-            productoResultsContainerCrear.style.display = 'none';
-        }
-    });
-
-    if (formularioPrincipalCrear && submitBtnCrear) {
-        formularioPrincipalCrear.addEventListener('submit', function(e) {
-            const clienteValido = validarFormularioClienteCrear();
-
-            if (!clienteValido) {
-                e.preventDefault();
-                alert('Por favor complete todos los campos de cliente requeridos (marcados con *).');
-                const firstInvalid = formularioPrincipalCrear.querySelector('.is-invalid');
-                if (firstInvalid) firstInvalid.focus();
-                return;
-            }
-
-            if (productosSeleccionadosCrear.length === 0) {
-                e.preventDefault();
-                alert('Debe agregar al menos un producto a la guía.');
-                if(busquedaProductoInputCrear) busquedaProductoInputCrear.focus();
-                return;
-            }
-            
-            submitBtnCrear.disabled = true;
-            submitBtnCrear.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-        });
-    }
-    
-    // Para repopular la tabla si el formulario falla y la vista envía `tabla_productos_data_json`
-    const tablaProductosInicialesJson = '{{ tabla_productos_data_json|escapejs|default:"[]" }}';
-    try {
-        const tablaProductosIniciales = JSON.parse(tablaProductosInicialesJson);
-        if (Array.isArray(tablaProductosIniciales) && tablaProductosIniciales.length > 0) {
-            productosSeleccionadosCrear = tablaProductosIniciales.map(p => ({
-                id: p.id.toString(),
-                nombre: p.nombre,
-                imagen: p.imagen || PLACEHOLDER_IMAGE_URL_CREAR,
-                precio: parseFloat(p.precio),
-                cantidad: parseInt(p.cantidad) || 1
-            }));
-            renderizarProductosSeleccionadosCrear();
-        }
-    } catch(e) {
-        console.error("Error al parsear productos iniciales JSON:", e);
-    }
-
-    // Render inicial (si no hubo repopulación, la tabla estará vacía)
-    if (productosSeleccionadosCrear.length === 0) {
-       renderizarProductosSeleccionadosCrear(); // Asegura que la tabla esté limpia y el total sea 0.00
-    }
+    // Calcular al cargar la página
+    updateSimpleContenidoResumen();
 });
 </script>
-{% endblock %}
+{% endblock javascript %}

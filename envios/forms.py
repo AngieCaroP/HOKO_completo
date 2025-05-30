@@ -45,6 +45,8 @@ class GuiaEnvioForm(forms.ModelForm):
         fields = [
             'cliente_nombre', 'cliente_telefono', 'cliente_ciudad',
             'cliente_direccion', 'cliente_direccion2',
+            'producto',         # <--- AÑADIR ESTO
+            'cantidad',         # <--- AÑADIR ESTO
             'contenido_resumen',
             'observaciones', 'estado',
         ]

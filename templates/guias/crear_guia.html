@@ -8,37 +8,65 @@
 <form method="post" class="form-container" id="miFormulario">
     {% csrf_token %}
 
+    {# Mostrar errores generales del formulario (non-field errors) #}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="grid-column: 1 / -1; margin-bottom: 1rem;"> {# MODIFICADO: Añadido margen #}
+            {% for error in form.non_field_errors %}
+                <p class="mb-0">{{ error }}</p> {# MODIFICADO: Añadido mb-0 #}
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Columna Izquierda: Información Personal -->
     <div class="personal-section">
         <div class="form-group">
             <label for="id_cliente_nombre">Nombre completo *</label>
             <input type="text" name="cliente_nombre" id="id_cliente_nombre" class="form-control" value="{{ form.cliente_nombre.value|default:'' }}" required>
-            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
+            <div class="invalid-feedback">Este campo es requerido.</div>
         </div>
         <div class="form-group">
             <label for="id_cliente_telefono">Teléfono *</label>
             <input type="text" name="cliente_telefono" id="id_cliente_telefono" class="form-control" value="{{ form.cliente_telefono.value|default:'' }}" required>
-            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
+            <div class="invalid-feedback">Este campo es requerido.</div>
         </div>
         <div class="form-group">
             <label for="id_cliente_ciudad">Ciudad *</label>
             <select name="cliente_ciudad" id="id_cliente_ciudad" class="form-control" required>
-                <option value="">Seleccione una ciudad</option> {# Mejor tener una opción vacía por defecto #}
+                <option value="">Seleccione una ciudad</option>
                 {% for value, label in form.fields.cliente_ciudad.choices %}
                     <option value="{{ value }}" {% if form.cliente_ciudad.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
+            <div class="invalid-feedback">Este campo es requerido.</div>
         </div>
         <div class="form-group">
             <label for="id_cliente_direccion">Dirección *</label>
             <input type="text" name="cliente_direccion" id="id_cliente_direccion" class="form-control" value="{{ form.cliente_direccion.value|default:'' }}" required>
-            <div class="invalid-feedback">Este campo es requerido.</div> {# Para JS #}
+            <div class="invalid-feedback">Este campo es requerido.</div>
         </div>
         <div class="form-group">
             <label for="id_cliente_direccion2">Dirección secundaria</label>
             <input type="text" name="cliente_direccion2" id="id_cliente_direccion2" class="form-control" value="{{ form.cliente_direccion2.value|default:'' }}">
         </div>
+        
+        <div class="form-group">
+            <label for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}<div class="invalid-feedback d-block">{{ form.observaciones.errors|join:", " }}</div>{% endif %}
+        </div>
+
+        {# AÑADIDO: Campo ESTADO visible aquí, en la columna izquierda #}
+        <div class="form-group">
+            <label for="{{ form.estado.id_for_label }}">Estado *</label>
+            {{ form.estado }} {# Esto renderizará el <select> de tu form #}
+            {# Mostrando errores de Django si existen, o un div para JS si no #}
+            {% if form.estado.errors %}
+                <div class="invalid-feedback d-block">{{ form.estado.errors|join:", " }}</div>
+            {% else %}
+                <div class="invalid-feedback">Este campo es requerido.</div>
+            {% endif %}
+        </div>
+        {# ELIMINADO: el div duplicado de non_field_errors que estaba mal cerrado aquí #}
     </div>
 
     <!-- Línea separadora entre columnas -->
@@ -62,9 +90,7 @@
                             <th>Acción</th>
                         </tr>
                     </thead>
-                    <tbody id="resultados-busqueda">
-                        <!-- Resultados de búsqueda dinámicos -->
-                    </tbody>
+                    <tbody id="resultados-busqueda"></tbody>
                 </table>
             </div>
 
@@ -80,13 +106,11 @@
                             <th>Acción</th>
                         </tr>
                     </thead>
-                    <tbody id="productos-seleccionados">
-                        <!-- Productos seleccionados aparecerán aquí -->
-                    </tbody>
+                    <tbody id="productos-seleccionados"></tbody>
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-right"><strong>Total:</strong></td>
-                            <td id="total-compra">$0.00</td> {# Agregado $ para consistencia #}
+                            <td id="total-compra">$0.00</td> 
                             <td></td>
                         </tr>
                     </tfoot>
@@ -95,14 +119,18 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="id_contenido"><strong>Contenido de la orden</strong></label>
-            <input type="text" name="contenido" id="id_contenido" class="form-control" value="{{ form.contenido.value|default:'' }}" maxlength="500" readonly>
-            <small class="form-text text-muted">Este campo se llena automáticamente con los productos seleccionados</small>
-        </div>
- 
-        <input type="hidden" name="estado" value="pendiente">
-    </div>
+        {# CAMPO CONTENIDO_RESUMEN - se actualiza por JS #}
+            <div class="form-group mt-3">
+                <label for="{{ form.contenido_resumen.id_for_label }}"><strong>{{ form.contenido_resumen.label }}</strong></label>
+                {{ form.contenido_resumen }} {# Renderiza el input readonly con id="id_contenido" #}
+                {% if form.contenido_resumen.help_text %}
+                <small class="form-text text-muted">{{ form.contenido_resumen.help_text }}</small>
+                {% else %}
+                <small class="form-text text-muted">Resumen de los productos seleccionados.</small>
+                {% endif %}
+            </div>
+    
+       
 
     <div class="form-actions text-right mt-4">
         <button type="submit" name="guardar" class="btn btn-primary" id="submitBtn">
@@ -115,40 +143,41 @@
 </form>
 
 <style>
-    .img-producto { width: 50px; height: 50px; object-fit: contain; }
+    .img-producto { 
+        width: 50px;  /* Asegura el ancho */
+        height: 50px; /* Asegura la altura */
+        object-fit: contain; /* Mantiene la proporción y ajusta dentro del contenedor */
+        border-radius: 3px; /* Opcional: para bordes redondeados como en otros ejemplos */
+    }
     .is-invalid { border-color: red !important; }
     .invalid-feedback { display: none; color: red; font-size: 0.875em; margin-top: .25rem; }
     .form-control.is-invalid + .invalid-feedback,
-    .form-control.is-invalid ~ .invalid-feedback, /* Si no es hermano directo */
-    select.is-invalid + .invalid-feedback,
-    select.is-invalid ~ .invalid-feedback {
+    .form-control.is-invalid ~ .invalid-feedback, 
+    select.is-invalid + .invalid-feedback, 
+    select.is-invalid ~ .invalid-feedback, 
+    .invalid-feedback.d-block { 
         display: block;
     }
-    /* Estilos para tabla (ejemplo) */
-    .tabla-rosada { width: 100%; border-collapse: collapse; }
-    .tabla-rosada th, .tabla-rosada td { border: 1px solid #f0d9e7; padding: 8px; text-align: left; }
-    .tabla-rosada thead { background-color: #fce4ec; } /* Rosa claro */
-    .dropdown-results { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; background: white; position: absolute; z-index:1000; width: calc(100% - 2px); } /* Ajuste width */
+    .tabla-rosada { width: 30%; border-collapse: collapse; }
+    .tabla-rosada th, .tabla-rosada td { border: 1px solid #f0d9e7; padding: 8px; text-align: left; vertical-align: middle; } /* Añadido vertical-align */
+    .tabla-rosada thead { background-color: #fce4ec; } 
+    .dropdown-results { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; background: white; position: absolute; z-index:1000; width: calc(100% - 2px); }
     .text-right { text-align: right; }
     .mt-3 { margin-top: 1rem; }
     .mt-4 { margin-top: 1.5rem; }
-    /* Estructura dos columnas */
     .form-container { display: flex; gap: 20px; }
     .personal-section, .right-section { flex: 1; }
+    
     @media (max-width: 768px) { .form-container { flex-direction: column; } }
+    .alert-danger { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: .25rem; }
 </style>
 
 <script>
-// El primer DOMContentLoaded para validación de campos lo eliminamos o comentamos,
-// ya que integraremos esa lógica en el segundo.
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM para productos y guardado cargado.");
-    // Array para almacenar productos seleccionados
     let productosSeleccionados = [];
-    const PLACEHOLDER_IMG_URL = 'https://via.placeholder.com/50'; // Definir URL de placeholder
+    const PLACEHOLDER_IMG_URL = 'https://via.placeholder.com/50'; 
 
-    // Selectores de elementos del DOM
     const form = document.getElementById('miFormulario');
     const submitBtn = document.getElementById('submitBtn');
     const busquedaProductoInput = document.getElementById('busqueda-producto');
@@ -159,32 +188,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const contenidoOrdenInput = document.getElementById('id_contenido');
     const errorProductosTablaDiv = document.getElementById('error-productos-tabla');
 
-
-    // Función para validar los campos requeridos del cliente
-    function validarCamposCliente() {
+    // Función para validar los campos requeridos del cliente Y EL ESTADO
+    function validarCamposRequeridos() { // Renombrado para mayor claridad
         let isValid = true;
-        const requiredClientFields = [
+        const requiredFieldsConfig = [ 
             { name: 'cliente_nombre', msg: 'Nombre completo es requerido.' },
             { name: 'cliente_telefono', msg: 'Teléfono es requerido.' },
             { name: 'cliente_ciudad', msg: 'Ciudad es requerida.' },
-            { name: 'cliente_direccion', msg: 'Dirección es requerida.' }
+            { name: 'cliente_direccion', msg: 'Dirección es requerida.' },
+            { name: 'estado', msg: 'Estado es requerido.'} // AÑADIDO EL CAMPO ESTADO
         ];
 
-        requiredClientFields.forEach(config => {
+        requiredFieldsConfig.forEach(config => {
             const field = form.querySelector(`[name="${config.name}"]`);
-            // El div de feedback debe ser hermano o estar cerca para este selector simple
-            const feedbackDiv = field.parentElement.querySelector('.invalid-feedback');
+            // Buscar el div .invalid-feedback que sea hermano directo o esté dentro del mismo .form-group
+            const parentGroup = field.closest('.form-group');
+            const feedbackDiv = parentGroup ? parentGroup.querySelector('.invalid-feedback') : (field.nextElementSibling && field.nextElementSibling.classList.contains('invalid-feedback') ? field.nextElementSibling : null);
 
-            if (!field.value.trim()) {
+
+            if (!field.value || (field.type === 'select-one' && field.value === "")) { // Verifica si se ha seleccionado una opción
                 isValid = false;
                 field.classList.add('is-invalid');
                 if (feedbackDiv) {
-                    feedbackDiv.textContent = config.msg;
+                    // Solo actualizar el texto si no es un error de Django (que ya tiene el texto)
+                    if (!feedbackDiv.classList.contains('d-block')) {
+                        feedbackDiv.textContent = config.msg;
+                    }
                     feedbackDiv.style.display = 'block';
                 }
             } else {
                 field.classList.remove('is-invalid');
-                if (feedbackDiv) {
+                if (feedbackDiv && !feedbackDiv.classList.contains('d-block')) { // No ocultar errores de Django
                     feedbackDiv.style.display = 'none';
                 }
             }
@@ -192,13 +226,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return isValid;
     }
 
-    // Función para generar el contenido de la orden
+    // --- El resto de tus funciones JavaScript (generarContenidoOrden, actualizarTotalYContenido, renderizarProductos, etc.) ---
+    // --- permanecen igual que en la respuesta anterior ---
     function generarContenidoOrden() {
         let contenido = '';
         const maxCaracteres = 500;
         
         productosSeleccionados.forEach((producto, index) => {
-            const item = `${producto.cantidad}x ${producto.nombre}`; // Cambiado a "x" para claridad
+            const item = `${producto.cantidad}x ${producto.nombre}`; 
             const newEntry = (index > 0 ? ', ' : '') + item;
 
             if ((contenido.length + newEntry.length) <= maxCaracteres) {
@@ -215,25 +250,21 @@ document.addEventListener('DOMContentLoaded', function() {
         contenidoOrdenInput.value = contenido;
     }
     
-    // Función para actualizar el total
     function actualizarTotalYContenido() {
         let total = 0;
         productosSeleccionados.forEach(producto => {
             total += parseFloat(producto.precio) * parseInt(producto.cantidad);
         });
-        totalCompraTd.textContent = '$' + total.toFixed(2); // Añadir $
+        totalCompraTd.textContent = '$' + total.toFixed(2); 
         generarContenidoOrden();
-        // No es necesario generar inputs ocultos aquí, se hace al renderizar la tabla
     }
 
-    // Función para renderizar la tabla de productos
     function renderizarProductos() {
-        productosSeleccionadosTbody.innerHTML = ''; // Limpiar tabla
+        productosSeleccionadosTbody.innerHTML = ''; 
         
         productosSeleccionados.forEach((producto, index) => {
             const subtotal = parseFloat(producto.precio) * parseInt(producto.cantidad);
             const row = document.createElement('tr');
-            // Los inputs ocultos se crean aquí, asegurando que siempre estén actualizados con la tabla
             row.innerHTML = `
                 <td><img src="${producto.imagen || PLACEHOLDER_IMG_URL}" class="img-producto" onerror="this.src='${PLACEHOLDER_IMG_URL}'"></td>
                 <td>${producto.nombre}</td>
@@ -257,7 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
             productosSeleccionadosTbody.appendChild(row);
         });
         
-        // Re-adjuntar event listeners
         document.querySelectorAll('.cantidad-producto').forEach(input => {
             input.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index);
@@ -266,10 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     nuevaCantidad = 1; this.value = 1;
                 }
                 productosSeleccionados[index].cantidad = nuevaCantidad;
-                // Re-renderizar solo la fila afectada o toda la tabla
-                // Para simplicidad, re-renderizamos todo. Si hay problemas de rendimiento, optimizar.
                 renderizarProductos(); 
-                // actualizarTotalYContenido(); // renderizarProductos ya llama a esto
             });
         });
         
@@ -277,49 +304,46 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 const index = parseInt(this.dataset.index);
                 productosSeleccionados.splice(index, 1);
-                renderizarProductos(); // Esto actualizará los inputs ocultos y el total
+                renderizarProductos(); 
             });
         });
         
-        actualizarTotalYContenido(); // Actualizar total y contenido después de renderizar
+        actualizarTotalYContenido(); 
         if (productosSeleccionados.length > 0 && errorProductosTablaDiv) {
             errorProductosTablaDiv.style.display = 'none';
         }
     }
 
-    // Función para agregar producto
     function agregarProducto(id, nombre, imagen, precio) {
         const existe = productosSeleccionados.some(p => p.id.toString() === id.toString());
         if (!existe) {
             productosSeleccionados.push({
-                id: id.toString(), // Asegurar que ID sea string para comparaciones
+                id: id.toString(), 
                 nombre: nombre,
                 imagen: imagen || PLACEHOLDER_IMG_URL,
                 precio: parseFloat(precio),
                 cantidad: 1
             });
-            renderizarProductos(); // Esto actualizará la tabla y los inputs ocultos
+            renderizarProductos(); 
              if (errorProductosTablaDiv) errorProductosTablaDiv.style.display = 'none';
         } else {
             alert('Este producto ya fue agregado. Puedes modificar la cantidad en la tabla.');
         }
     }
 
-    // Función para buscar productos
     function searchProductosAPI(query) {
         if (query.length < 2) {
             if (productoResultsDiv) productoResultsDiv.style.display = 'none';
             return;
         }
 
-        // Asumo que tienes un endpoint API en Django
         fetch(`/api/productos/?search=${encodeURIComponent(query)}`)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok.');
                 return response.json();
             })
             .then(data => {
-                resultadosBusquedaTbody.innerHTML = ''; // Limpiar resultados previos
+                resultadosBusquedaTbody.innerHTML = ''; 
                 if (data.length > 0) {
                     data.forEach(producto => {
                         const row = document.createElement('tr');
@@ -341,9 +365,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         resultadosBusquedaTbody.appendChild(row);
                     });
                     
-                    // Adjuntar listeners a los botones de agregar de la búsqueda
                     document.querySelectorAll('.btn-agregar-busqueda').forEach(btn => {
-                        const newBtn = btn.cloneNode(true); // Clonar para evitar listeners duplicados
+                        const newBtn = btn.cloneNode(true); 
                         btn.parentNode.replaceChild(newBtn, btn);
                         newBtn.addEventListener('click', function() {
                             agregarProducto(
@@ -367,14 +390,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (productoResultsDiv) productoResultsDiv.style.display = 'none';
             });
     }
+    // --- FIN DE LAS FUNCIONES DE PRODUCTOS ---
+
 
     // --- MANEJO DEL BOTÓN GUARDAR Y VALIDACIÓN DEL FORMULARIO ---
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
             console.log("Formulario submit event disparado.");
 
-            // 1. Validar campos del cliente
-            const clienteEsValido = validarCamposCliente();
+            // 1. Validar campos del cliente y estado
+            const camposGeneralesValidos = validarCamposRequeridos(); // Nombre de función actualizado
 
             // 2. Validar que haya al menos un producto seleccionado
             let productosSonValidos = true;
@@ -390,12 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // 3. Si alguna validación falla, prevenir el envío
-            if (!clienteEsValido || !productosSonValidos) {
+            if (!camposGeneralesValidos || !productosSonValidos) {
                 e.preventDefault(); // Detener el envío
-                console.log("Validación fallida. Cliente:", clienteEsValido, "Productos:", productosSonValidos);
+                console.log("Validación fallida. Campos Generales:", camposGeneralesValidos, "Productos:", productosSonValidos);
                 
-                // Re-habilitar botón en caso de que se haya deshabilitado por un clic anterior
-                // (aunque el listener de 'click' en submitBtn ya lo maneja)
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
 
@@ -410,11 +433,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // 4. Si todo es válido, deshabilitar botón y permitir envío
-            console.log("Validación exitosa. Formularios ocultos de productos ya están en el DOM por renderizarProductos().");
+            console.log("Validación exitosa.");
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             
-            // El formulario se enviará porque no se llamó a e.preventDefault()
         });
     } else {
         console.error("Formulario o botón de submit no encontrado.");
@@ -427,20 +449,17 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 searchProductosAPI(this.value);
-            }, 300); // Debounce
+            }, 300); 
         });
     }
 
-    // Ocultar resultados al hacer clic fuera
     document.addEventListener('click', function(e) {
         if (productoResultsDiv && !productoResultsDiv.contains(e.target) && e.target !== busquedaProductoInput) {
             productoResultsDiv.style.display = 'none';
         }
     });
 
-    // Precargar productos si estamos editando (o si se repopula después de un error de backend)
-    // Para que esto funcione al editar, la vista debe pasar `form.productos.value`
-    // o una variable similar con los productos actuales.
+    // --- PRECARGA DE PRODUCTOS ---
     const initialProductsData = {% if form.productos_json_data %}{{ form.productos_json_data|safe }}{% else %}{% if form.productos.value %}
         [{% for producto_item in form.productos.value %}
             {
@@ -461,9 +480,9 @@ document.addEventListener('DOMContentLoaded', function() {
             precio: parseFloat(p.precio),
             cantidad: parseInt(p.cantidad) || 1
         }));
-        renderizarProductos(); // Renderizar con los productos cargados
+        renderizarProductos(); 
     } else {
-        renderizarProductos(); // Asegurar que la tabla se renderice vacía si no hay datos iniciales
+        renderizarProductos(); 
     }
     
     console.log("Script completamente cargado y configurado.");

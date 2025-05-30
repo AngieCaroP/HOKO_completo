@@ -32,33 +32,7 @@
                 </div>
             </div>
 
-            {% if guia.producto %}
-            <hr>
-            <h4>Producto Principal</h4>
-             <table class="table table-sm table-bordered">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Precio Unitario</th>
-                        <th>Cantidad</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            {% if guia.producto.imagen %}
-                                <img src="{{ guia.producto.imagen.url }}" alt="{{ guia.producto.nombre }}" class="img-thumbnail mr-2" style="width: 50px; height: 50px; object-fit: contain;">
-                            {% endif %}
-                            {{ guia.producto.nombre }}
-                        </td>
-                        <td>${{ guia.producto.precio|floatformat:2 }}</td>
-                        <td>{{ guia.cantidad }}</td>
-                        <td>${{ guia.producto.precio|stringformat:".2f"|add:0|default:0.00|floatformat:2 }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            {% endif %}
+        
 
 
             {% if guia.items_guia.all %}
@@ -121,7 +95,224 @@
     </div>
 </div>
 <style>
-    body { background-color: #f8f9fa; }
-    .card-header h1 { font-size: 1.5rem; }
+    /*
+  Styles for Guia Detail Page - HOKO Theme
+  Assumes Font Awesome is loaded for icons.
+  Consider adding a class like "guia-detail-page" to the main container
+  <div class="container mt-4 guia-detail-page"> for better scoping.
+*/
+
+/* Apply HOKO's base body styles if not already fully inherited or if overriding inline styles */
+/* This would typically be in your main CSS, but shown for context if this were standalone */
+/*
+body {
+  font-family: 'Ubuntu', sans-serif;
+  background-color: #f5f5f5;
+  color: #070E27;
+  font-size: 18px;
+}
+*/
+
+/*
+  If you add <div class="container mt-4 guia-detail-page">
+  then prefix all selectors below with `.guia-detail-page `
+  Example: `.guia-detail-page .card { ... }`
+  For this example, I'll use the existing structure for selectors.
+*/
+
+/* --- Card Styling --- */
+.container.mt-4 > .card.shadow-sm { /* Target the main card more specifically */
+  border: none; /* Remove default Bootstrap border if shadow is enough */
+  border-radius: 10px; /* Consistent with HOKO's .products-container or .form-container */
+}
+
+.container.mt-4 > .card > .card-header.bg-primary {
+  background-color: #070E27 !important; /* HOKO primary color */
+  color: white;
+  border-bottom: 1px solid #1E3A8A; /* Subtle darker border, HOKO hover color */
+  border-top-left-radius: 10px; /* Match card radius */
+  border-top-right-radius: 10px;
+  padding: 1rem 1.5rem;
+}
+
+/* The HTML has h1.h4 - this styles the h1 specifically in this context */
+.container.mt-4 > .card > .card-header h1.h4 {
+  font-family: 'Noto Sans', sans-serif; /* HOKO title font */
+  font-size: 1.75rem; /* Larger than default Bootstrap h4, more like a HOKO h2/h3 */
+  font-weight: bold;
+  color: white; /* Already text-white, but explicit */
+}
+
+.container.mt-4 > .card > .card-body {
+  padding: 2rem; /* More generous padding */
+}
+
+/* --- Section Headers (h4 inside card-body) --- */
+.container.mt-4 > .card > .card-body h4 {
+  font-family: 'Noto Sans', sans-serif; /* HOKO title font */
+  font-size: 1.25rem; /* Slightly larger than HOKO's default h4 (14px) */
+  color: #070E27; /* HOKO primary text color */
+  margin-top: 1.5rem; /* Space above section titles */
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #070E27; /* Separator like .main-content h1 */
+}
+.container.mt-4 > .card > .card-body h4:first-of-type {
+  margin-top: 0; /* No top margin for the very first h4 */
+}
+
+/* --- Paragraph Text --- */
+.container.mt-4 > .card > .card-body p {
+  font-size: 1rem; /* Adjust if 18px base is too large here */
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  color: #333; /* Slightly softer than pure #070E27 for body text */
+}
+.container.mt-4 > .card > .card-body p strong {
+  color: #070E27; /* HOKO primary text for emphasis */
+  font-weight: 600; /* Noto Sans bold can be quite heavy, 600 is a good medium */
+}
+
+/* --- Badge Styling --- */
+.container.mt-4 > .card > .card-body .badge.bg-info {
+  background-color: #1E3A8A !important; /* HOKO accent blue (sidebar hover) */
+  color: white !important;
+  font-size: 0.9em;
+  padding: 0.5em 0.8em;
+  border-radius: 5px; /* Match HOKO input/button radius */
+  font-weight: 500;
+}
+
+/* --- Horizontal Rule --- */
+.container.mt-4 > .card > .card-body hr {
+  border-top: 1px solid #ccc;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* --- Table Styling (to match HOKO .products-table theme) --- */
+.container.mt-4 > .card .table-responsive {
+  margin-top: 1rem;
+}
+
+.container.mt-4 > .card .table {
+  font-size: 0.95rem; /* Slightly smaller for table data, or match HOKO products-table */
+  border-radius: 5px; /* If table has an outer border */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Subtle shadow like .tabla-rosada */
+}
+
+.container.mt-4 > .card .table thead.table-light,
+.container.mt-4 > .card .table thead { /* Override Bootstrap .table-light or general thead */
+  background-color: #070E27; /* HOKO table header color */
+  color: white;
+}
+
+.container.mt-4 > .card .table thead.table-light th,
+.container.mt-4 > .card .table thead th {
+  font-family: 'Noto Sans', sans-serif;
+  font-weight: 600;
+  color: white;
+  padding: 0.9rem 0.75rem;
+  border-bottom-width: 0; /* Remove default bottom border if HOKO style doesn't use it */
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.container.mt-4 > .card .table tbody tr:hover {
+  background-color: #f0f0f0; /* Consistent with .tabla-rosada tr:hover */
+}
+
+.container.mt-4 > .card .table td,
+.container.mt-4 > .card .table th {
+  vertical-align: middle;
+  padding: 0.75rem; /* Adjust padding as needed */
+  border-color: #e0e0e0; /* Lighter border color */
+}
+
+.container.mt-4 > .card .table .img-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  padding: 0.2rem;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.container.mt-4 > .card .table img[src*="placeholder.com"] { /* Style placeholder specifically if needed */
+    opacity: 0.7;
+}
+
+.container.mt-4 > .card .table tfoot tr.table-light,
+.container.mt-4 > .card .table tfoot tr {
+  background-color: #e9ecef; /* A light grey, distinct from tbody hover */
+}
+.container.mt-4 > .card .table tfoot td {
+  font-weight: bold;
+  color: #070E27;
+  padding: 0.9rem 0.75rem;
+}
+
+/* --- Muted Text for Summary or "No products" --- */
+.container.mt-4 > .card .text-muted {
+  color: #555 !important; /* Darker muted text */
+  font-style: italic;
+}
+.container.mt-4 > .card .text-center.text-muted { /* For "No hay productos..." */
+    padding: 2rem 0;
+    font-size: 1.1rem;
+}
+
+
+/* --- Action Buttons --- */
+.container.mt-4 > .card .mt-4.d-flex { /* The div containing buttons */
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0; /* Separator before buttons */
+}
+
+.container.mt-4 > .card .btn {
+  padding: 0.6rem 1.2rem; /* HOKO .btn style */
+  font-size: 0.95rem;    /* HOKO .btn style */
+  border-radius: 8px;    /* HOKO .btn style */
+  font-weight: 500;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.container.mt-4 > .card .btn:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.container.mt-4 > .card .btn i {
+  margin-right: 0.5em; /* Space between icon and text */
+}
+
+/* Volver al Listado Button (btn-secondary) */
+.container.mt-4 > .card .btn-secondary {
+  background-color: #6c757d; /* Standard Bootstrap secondary */
+  border-color: #6c757d;
+  color: white;
+}
+.container.mt-4 > .card .btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+/* Editar Guía Button (btn-warning) - Match HOKO's .btn.editar */
+.container.mt-4 > .card .btn-warning {
+  background-color: #FFC107; /* HOKO .btn.editar color */
+  border-color: #FFC107;
+  color: #212529; /* Dark text for yellow background, Bootstrap's default for warning */
+}
+.container.mt-4 > .card .btn-warning:hover {
+  background-color: #e0a800; /* Darker yellow on hover */
+  border-color: #d39e00;
+}
+
+/* --- Remove the page-specific inline style from the HTML template --- */
+/* The following was in your HTML, it's better to manage it here or in your main CSS.
+   body { background-color: #f8f9fa; } -> HOKO's #f5f5f5 is likely preferred.
+   .card-header h1 { font-size: 1.5rem; } -> Handled above with more HOKO consistency.
+*/
 </style>
 {% endblock %}

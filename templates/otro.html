@@ -1,4 +1,223 @@
 
+                {% endif %}
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h4>Información del Cliente</h4>
+                        <div class="mb-3">
+                            <label for="{{ form.cliente_nombre.id_for_label }}" class="form-label">{{ form.cliente_nombre.label }}</label>
+                            {{ form.cliente_nombre }}
+                            {% if form.cliente_nombre.help_text %}
+                                <small class="form-text text-muted">{{ form.cliente_nombre.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.cliente_nombre.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.cliente_telefono.id_for_label }}" class="form-label">{{ form.cliente_telefono.label }}</label>
+                            {{ form.cliente_telefono }}
+                            {% if form.cliente_telefono.help_text %}
+                                <small class="form-text text-muted">{{ form.cliente_telefono.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.cliente_telefono.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.cliente_ciudad.id_for_label }}" class="form-label">{{ form.cliente_ciudad.label }}</label>
+                            {{ form.cliente_ciudad }}
+                            {% if form.cliente_ciudad.help_text %}
+                                <small class="form-text text-muted">{{ form.cliente_ciudad.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.cliente_ciudad.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.cliente_direccion.id_for_label }}" class="form-label">{{ form.cliente_direccion.label }}</label>
+                            {{ form.cliente_direccion }}
+                            {% if form.cliente_direccion.help_text %}
+                                <small class="form-text text-muted">{{ form.cliente_direccion.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.cliente_direccion.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {% if form.cliente_direccion2 %} {# Check if field exists in form #}
+                        <div class="mb-3">
+                            <label for="{{ form.cliente_direccion2.id_for_label }}" class="form-label">{{ form.cliente_direccion2.label }}</label>
+                            {{ form.cliente_direccion2 }}
+                            {% if form.cliente_direccion2.help_text %}
+                                <small class="form-text text-muted">{{ form.cliente_direccion2.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.cliente_direccion2.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4>Detalles del Envío</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Código de seguimiento:</label>
+                            <input type="text" value="{{ form.instance.codigo_seguimiento|default:guia.codigo_seguimiento }}" class="form-control" readonly>
+                            <small class="form-text text-muted">Este código usualmente no es editable directamente.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }}</label>
+                            {{ form.estado }}
+                            {% if form.estado.help_text %}
+                                <small class="form-text text-muted">{{ form.estado.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.estado.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <p><strong>Fecha creación:</strong> {{ form.instance.fecha_creacion|default:guia.fecha_creacion|date:"d/m/Y H:i:s" }}</p>
+                        <p><strong>Última actualización:</strong> {{ form.instance.fecha_actualizacion|default:guia.fecha_actualizacion|date:"d/m/Y H:i:s" }}</p>
+
+                        {% if form.observaciones %} {# Check if field exists in form #}
+                        <div class="mb-3">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label">{{ form.observaciones.label }}</label>
+                            {{ form.observaciones }}
+                            {% if form.observaciones.help_text %}
+                                <small class="form-text text-muted">{{ form.observaciones.help_text }}</small>
+                            {% endif %}
+                            {% for error in form.observaciones.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% comment %}
+                Editing items directly in this form is complex and usually handled with formsets.
+                For simplicity, we'll keep displaying them as reference.
+                If you need to edit items, you'd typically:
+                1. Use a Django FormSet.
+                2. Provide links to edit individual items.
+                3. Use JavaScript to dynamically add/remove/edit items.
+                {% endcomment %}
+                {% with guia_instance=form.instance|default:guia %}
+                    {% if guia_instance and guia_instance.items_guia.all %}
+                        <hr>
+                        <h4>Productos Detallados en la Guía (Referencia)</h4>
+                        {% if guia_instance.contenido_resumen %}
+                            <p class="text-muted"><small>Resumen: {{ guia_instance.contenido_resumen }}</small></p>
+                        {% endif %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Imagen</th>
+                                        <th>Producto</th>
+                                        <th>Precio Unitario (Guía)</th>
+                                        <th>Cantidad</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in guia_instance.items_guia.all %}
+                                    <tr>
+                                        <td>
+                                            {% if item.producto.imagen %}
+                                                <img src="{{ item.producto.imagen.url }}" alt="{{ item.producto.nombre }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: contain;">
+                                            {% else %}
+                                                <img src="https://via.placeholder.com/60" alt="Sin imagen" class="img-thumbnail">
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.producto.nombre }}</td>
+                                        <td>${{ item.precio_unitario_en_guia|floatformat:2 }}</td>
+                                        <td>{{ item.cantidad }}</td>
+                                        <td>${{ item.subtotal|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="4" class="text-end"><strong>Total Guía (Tabla):</strong></td>
+                                        <td class="fw-bold">${{ guia_instance.total_guia|floatformat:2 }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    {% elif guia_instance %}
+                        <hr>
+                        <p class="text-center text-muted">No hay productos detallados en la tabla para esta guía.</p>
+                    {% endif %}
+                {% endwith %}
+
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'detalle_guia' form.instance.id|default:guia.id %}" class="btn btn-secondary"> {# Link back to the detail view #}
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success"> {# Changed to btn-success for saving #}
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+        <div class="form-group">
+            <label for="{{ form.contenido.id_for_label }}"><strong>Contenido de la orden (máx 39
+                    letras)</strong></label>
+            {{ form.contenido }}
+             {% if form.contenido.errors %}<div class="invalid-feedback d-block">{{ form.contenido.errors }}</div>{% endif %}
+        </div>
+        {# El campo form.cantidad ya está arriba, no lo necesitamos aquí de nuevo #}
+        {#
+        <div class="form-group">
+            <label for="{{ form.cantidad.id_for_label }}"><strong>Cantidad *</strong></label>
+            {{ form.cantidad }}
+        </div>
+        #}
+         <div class="form-group">
+            <label for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}<div class="invalid-feedback d-block">{{ form.observaciones.errors }}</div>{% endif %}
+        </div>
+
+        {# Campo oculto para el estado, ya manejado por el form #}
+        {# {{ form.estado }} #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>

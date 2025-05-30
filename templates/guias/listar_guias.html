@@ -141,91 +141,113 @@
 </div>
 
 <style>
+  
+    /* ESTILOS DEL LISTADO (los que tenías en tu HTML de listado, adaptados) */
+    .products-container h1 { /* Estilo HOKO para H1 */
+        text-align: center;
+        font-size: 28px; /* O el tamaño de tu .main-content h1 */
+        font-weight: bold;
+        color: #070E27;
+        border-bottom: 2px solid #070E27;
+        margin-bottom: 30px;
+        padding-bottom: 10px;
+    }
+
     .products-actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
-        flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
-        gap: 10px; /* Espacio entre grupos de botones */
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 1rem; /* HOKO .products-actions style */
+        background-color: #f9f9f9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
-
     .search-form {
-        flex-grow: 1; /* Que ocupe el espacio disponible */
-        min-width: 300px; /* Ancho mínimo para la búsqueda */
-    }
-    
-    .action-buttons {
         display: flex;
-        gap: 10px; /* Espacio entre botones directos */
+        flex-grow: 1;
         align-items: center;
+        gap: 5px;
     }
-
-    .popover-container {
-        position: relative; /* Para el posicionamiento del popover */
+    .search-form-input {
+        flex-grow: 1;
+        min-width: 300px; /* Ajusta según necesidad */
+        height: 38px; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; /* HOKO .search-input */
+        font-size: 1rem; /* HOKO .search-input (18px / 1.125rem si base es 16px)*/
     }
-
-    .popover.hidden {
-        display: none;
-    }
-
-    /* Estilos básicos para los botones si no los tienes definidos globalmente */
-    .btn {
-        padding: 8px 15px;
-        border: 1px solid #ccc;
-        background-color: #f8f8f8;
-        border-radius: 4px;
-        text-decoration: none;
-        color: #333;
+    .search-form-btn, .action-buttons .btn { /* HOKO .btn */
+        padding: 0.6rem 1.2rem;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 0.95rem;
         cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    .btn:hover {
-        background-color: #e2e2e2;
-    }
-    .btn.crear {
-        background-color: #5cb85c;
-        color: white;
-        border-color: #4cae4c;
-    }
-    .btn.crear:hover {
-        background-color: #4cae4c;
-    }
-    .btn.btn-primary {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-    .btn.btn-primary:hover {
-        background-color: #0056b3;
-    }
-    .btn.btn-secondary {
-        background-color: #6c757d;
-        color: white;
-        border-color: #6c757d;
-    }
-    .btn.btn-secondary:hover {
-        background-color: #5a6268;
-    }
-    .badge {
-        display: inline-block;
-        padding: .35em .65em;
-        font-size: .75em;
-        font-weight: 700;
-        line-height: 1;
-        color: #fff;
-        text-align: center;
+        transition: background-color 0.3s ease;
+        height: 38px; /* Ajustado a 38px */
+        display: inline-flex; /* Para alinear icono y texto */
+        align-items: center;
+        justify-content: center;
         white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: .375rem;
     }
-    .badge-success { background-color: #28a745; }
-    .badge-danger { background-color: #dc3545; }
-    .badge-secondary { background-color: #6c757d; }
-    .badge-info { background-color: #17a2b8; }
-    .badge-warning { background-color: #ffc107; color: #212529; } /* Amarillo necesita texto oscuro a veces */
-    .badge-light { background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; }
+    .search-form-btn { background-color: #1E3A8A; /* HOKO .btn.buscar */ }
+    .search-form-btn i { margin-right: 5px;}
 
+    .action-buttons { display: flex; align-items: center; gap: 10px; }
+    .action-buttons .btn.crear { background-color: #28A745; /* HOKO .btn.crear */ }
+    .action-buttons .btn.btn-secondary { background-color: #6c757d; } /* Bootstrap standard */
+
+    .popover-container { position: relative; }
+    .popover-toggle.btn { background-color: #4a90e2; /* HOKO .popover-toggle */ }
+    .popover {
+        position: absolute; right: 0; top: calc(100% + 5px);
+        background-color: white; border: 1px solid #ccc;
+        padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        z-index: 1050; min-width: 280px; border-radius: 8px; /* HOKO .popover */
+    }
+    .popover.hidden { display: none; }
+    .popover h4 { margin-top:0; margin-bottom: 8px; font-size: 1rem; color: #333; }
+    .popover .filter-select, .popover .filter-date {
+        width: 100%; padding: 8px; margin-bottom: 10px;
+        border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem;
+    }
+    .popover .date-filters { display: flex; align-items: center; gap: 5px; margin-bottom: 15px; }
+    .popover .date-filters span { margin: 0 5px; }
+    .popover .export-buttons-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;}
+    .popover .export-buttons-group .btn { width: 100%; background-color: #f0f0f0; border-color: #ddd; color: #333; }
+    .popover .btn-primary { background-color: #070E27; width: 100%; padding: 10px; } /* HOKO primary button */
+
+
+    .table-wrapper { overflow-x: auto; margin-top: 20px; }
+    .products-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; /* HOKO .products-table font-size (18px si base es 18px) */}
+    .products-table th, .products-table td {
+        padding: 10px 12px; /* HOKO .products-table th, td padding */
+        border: 1px solid #ddd; /* Un borde más estándar que el original */
+        text-align: left;
+        vertical-align: middle;
+    }
+    .products-table thead th {
+        background-color: #070E27; /* HOKO .products-table th background */
+        color: white;
+        font-weight: 600; /* HOKO .products-table th font-weight */
+    }
+    .products-table tbody tr:hover { background-color: #f5f5f5; /* Un hover sutil */ }
+    .products-table .text-center { text-align: center; }
+
+    .products-table .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; margin: 0 2px; }
+    .products-table .btn.ver { background-color: #c9c0a4; color: #000; } /* HOKO .btn.ver */
+    .products-table .btn.editar { background-color: #FFC107; color: #000; } /* HOKO .btn.editar */
+    .products-table .btn.eliminar { background-color: #DC3545; color: white; } /* HOKO .btn.eliminar */
+
+    /* Badges con colores consistentes de HOKO */
+    .badge { display: inline-block; padding: .4em .75em; font-size: .85em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 8px; }
+    .bg-success-hoko { background-color: #28a745; color: white; }
+    .bg-danger-hoko  { background-color: #dc3545; color: white; }
+    .bg-secondary-hoko{ background-color: #6c757d; color: white; }
+    .bg-info-hoko    { background-color: #1E3A8A; color: white; } /* Usando el azul de sidebar hover */
+    .bg-warning-hoko { background-color: #ffc107; color: #212529; }
+    .bg-light-hoko   { background-color: #e9ecef; color: #212529; border: 1px solid #ced4da; }
 
 </style>
 {% endblock %}
