@@ -8,6 +8,54 @@
     {% load static %}
 
     {% block extra_css %}{% endblock %}
+
+     <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+  
+  <!-- Estilos -->
+
+  <link rel="stylesheet" href="{% static 'css/styles_menu.css' %}">
+</head>
+<body>
+  <div class="layout-container">
+    <!-- Menú lateral -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <button class="menu-toggle" onclick="toggleMenu()" aria-label="Abrir menú lateral"></button>
+        <h1 class="logo-title">HOKO</h1>
+      </div>
+      <nav>
+        <ul class="menu" id="menu" aria-label="Menú de navegación">
+            <li class="menu-item {% if request.resolver_match.url_name == 'listar_productos' %}active{% endif %}">
+                <a href="{% url 'listar_productos' %}">
+                    <i class="fas fa-box"></i> Productos
+                </a>
+            </li>
+            <li class="menu-item {% if request.resolver_match.url_name == 'listar_stocks' %}active{% endif %}">
+                <a href="{% url 'listar_stocks' %}">
+                    <i class="fas fa-warehouse"></i> Stock
+                </a>
+            </li>
+            <li class="menu-item {% if request.resolver_match.url_name == 'listar_bodegas' %}active{% endif %}">
+              <a href="{% url 'listar_bodegas' %}">
+                  <i class="fas fa-warehouse"></i> Bodegas
+              </a>
+          </li>
+          <li class="menu-item {% if request.resolver_match.url_name == 'listar_guias' %}active{% endif %}">
+            <a href="{% url 'listar_guias' %}">
+                <i class="fas fa-warehouse"></i> Guias
+            </a>
+        </li>
+         <li class="menu-item {% if request.resolver_match.url_name == 'save_campaign' %}active{% endif %}">
+            <a href="{% url 'index' %}">
+                <i class="fas fa-warehouse"></i> Guias Contador
+            </a>
+        </li>
+        </ul>
+    </nav>
+    </div>
 </head>
 <body>
     <div class="container">
@@ -17,3 +65,6 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+
+
+

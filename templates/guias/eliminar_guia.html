@@ -1,22 +1,372 @@
 {% extends 'base.html' %}
 
-{% block title %}Eliminar Guía #{{ guia.id }} - HOKO{% endblock %}
+{% block title %}Eliminar Guía #{{ guia.id }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Confirmar eliminación</h1>
-    
-    <div class="alert alert-warning">
-        <p>¿Estás seguro que deseas eliminar la guía #{{ guia.id }}?</p>
-        <p><strong>Código:</strong> {{ guia.codigo_seguimiento }}</p>
-        <p><strong>Cliente:</strong> {{ guia.cliente_nombre }}</p>
-        <p><strong>Producto:</strong> {{ guia.producto.nombre }}</p>
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h4 mb-0">
+                <i class="fas fa-trash-alt me-2"></i> Eliminar Guía #{{ guia.id }}
+            </h1>
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-danger d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                    <h4 class="alert-heading mb-2">¡Acción irreversible!</h4>
+                    <p class="mb-0">Estás a punto de eliminar permanentemente esta guía de envío y todos sus productos
+                        asociados.</p>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Información de la Guía</h4>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-nowrap" style="width: 120px;">Código:</th>
+                                    <td>{{ guia.codigo_seguimiento }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Cliente:</th>
+                                    <td>{{ guia.cliente_nombre }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Teléfono:</th>
+                                    <td>{{ guia.cliente_telefono }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Ciudad:</th>
+                                    <td>{{ guia.get_cliente_ciudad_display }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Estado:</th>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ guia.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Fecha creación:</th>
+                                    <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    {% if guia.items_guia.all %}
+                    <h4>Productos en la Guía</h4>
+                    <div class="form-group mb-3">
+                        <label class="form-label"><strong>Contenido (Resumen):</strong></label>
+                        <div class="form-control" style="width: 100%;">
+                            {{ guia.contenido_resumen|default:"-" }}
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 60px;">Imagen</th>
+                                    <th>Producto</th>
+                                    <th class="text-end">Precio Unit.</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in guia.items_guia.all %}
+                                <tr>
+                                    <td>
+                                        <img src="{% if item.producto.imagen %}{{ item.producto.imagen.url }}{% else %}https://via.placeholder.com/60{% endif %}"
+                                            class="img-thumbnail" alt="{{ item.producto.nombre }}"
+                                            onerror="this.src='https://via.placeholder.com/60'">
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ item.producto.nombre }}</div>
+                                        <small class="text-muted">{{ item.producto.referencia|default:"Sin referencia"
+                                            }}</small>
+                                    </td>
+                                    <td class="text-end">${{ item.precio_unitario_en_guia|floatformat:2 }}</td>
+                                    <td class="text-center">{{ item.cantidad }}</td>
+                                    <td class="text-end fw-bold">${{ item.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Total:</td>
+                                    <td class="text-end fw-bold">${{ guia.total_guia|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <h4>Productos en la Guía</h4>
+                    <p class="text-center text-muted">No hay productos detallados en la tabla para esta guía.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <a href="{% url 'ver_guia' guia.id %}" class="btn btn-outline-secondary py-2 px-3"
+                    style="min-width: 120px;">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger py-2 px-3" style="min-width: 120px;">
+                    <i class="fas fa-trash-alt me-1"></i> Eliminar
+                </button>
+            </div>
+        </div>
     </div>
-    
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Confirmar eliminación</button>
-        <a href="{% url 'listar_guias' %}" class="btn btn-secondary">Cancelar</a>
-    </form>
 </div>
+
+<style>
+    /* --- ESTILOS BASE Y DEL CARD --- */
+    .container.mt-4>.card.shadow-sm {
+        border: none;
+        border-radius: 10px;
+    }
+
+    .container.mt-4>.card>.card-header.bg-primary {
+        background-color: #070E27 !important;
+        color: white;
+        border-bottom: 1px solid #1E3A8A;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        padding: 1rem 1.5rem;
+    }
+
+    .container.mt-4>.card>.card-header h1.h4 {
+        font-family: 'Noto Sans', sans-serif;
+        font-size: 1.75rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 0;
+    }
+
+    .container.mt-4>.card>.card-body {
+        padding: 2rem;
+    }
+
+    .container.mt-4>.card>.card-body h4 {
+        font-family: 'Noto Sans', sans-serif;
+        font-size: 1.25rem;
+        color: #070E27;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #070E27;
+    }
+
+    .container.mt-4>.card>.card-body h4:first-of-type {
+        margin-top: 0;
+    }
+
+    /* --- FORM CONTROLS --- */
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: #070E27;
+        margin-bottom: .5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-control[readonly] {
+        background-color: #e9ecef;
+        opacity: 1;
+        cursor: default;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+    }
+
+    /* --- BADGES --- */
+    .badge {
+        display: inline-block;
+        padding: 0.4em 0.8em;
+        font-size: 0.85em;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 1rem;
+    }
+
+    .badge.bg-info {
+        background-color: #1E3A8A !important;
+        color: white !important;
+    }
+
+    /* --- TABLES --- */
+    .table-responsive {
+        margin-top: 1rem;
+    }
+
+    .table {
+        font-size: 0.95rem;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .table thead.table-light {
+        background-color: #070E27;
+        color: white;
+    }
+
+    .table thead th {
+        font-family: 'Noto Sans', sans-serif;
+        font-weight: 600;
+        color: white;
+        padding: 0.9rem 0.75rem;
+        border-bottom-width: 0;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f0f0f0;
+    }
+
+    .table td,
+    .table th {
+        vertical-align: middle;
+        padding: 0.75rem;
+        border-color: #e0e0e0;
+    }
+
+    .img-thumbnail {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        padding: 0.2rem;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    img[src*="placeholder.com"] {
+        opacity: 0.7;
+    }
+
+    .table tfoot tr.table-light {
+        background-color: #e9ecef;
+    }
+
+    .table tfoot td {
+        font-weight: bold;
+        color: #070E27;
+        padding: 0.9rem 0.75rem;
+    }
+
+    /* --- BUTTONS --- */
+    .btn {
+        padding: 0.2rem 0.6rem;
+        font-size: 0.9rem;
+        border-radius: 8px;
+        font-weight: 50;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        text-decoration: none;
+    }
+
+    .btn:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .btn i {
+        margin-right: 0.5em;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+
+    /* --- UTILITY CLASSES --- */
+    .text-muted {
+        color: #6c757d !important;
+    }
+
+    .text-center {
+        text-align: center !important;
+    }
+
+    .text-end {
+        text-align: right !important;
+    }
+
+    .fw-bold {
+        font-weight: bold !important;
+    }
+
+    .d-flex {
+        display: flex !important;
+    }
+
+    .justify-content-between {
+        justify-content: space-between !important;
+    }
+
+    .align-items-center {
+        align-items: center !important;
+    }
+
+    .me-2 {
+        margin-right: 0.5rem !important;
+    }
+
+    .mb-0 {
+        margin-bottom: 0 !important;
+    }
+
+    .mb-2 {
+        margin-bottom: 0.5rem !important;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+</style>
 {% endblock %}
