@@ -307,120 +307,145 @@ def crear_guia(request):
 # del `request.POST[f'productos[{idx}][precio]']` al reconstruir `items_nuevos_para_db`.
 
 @transaction.atomic
-def editar_guia(request, id):
+def editar_guia(request, id): # Asumiendo que 'id' es el pk de GuiaEnvio
     guia = get_object_or_404(
-        GuiaEnvio.objects.select_related('producto').prefetch_related('items_guia__producto'),
+        GuiaEnvio.objects.prefetch_related('items_guia__producto'),
         id=id
     )
-    # Para la carga inicial de la página de edición
-    items_actuales_original_json = json.dumps([
+
+    # Para precargar la tabla JS con los items existentes
+    items_actuales_json = json.dumps([
         {
-            'id': str(item.producto.id), 'nombre': item.producto.nombre,
-            'imagen': item.producto.imagen.url if item.producto.imagen else 'https://via.placeholder.com/50',
-            'precio': str(item.precio_unitario_en_guia), 'cantidad': item.cantidad
+            'id': str(item.producto.id), # ID del Producto
+            'nombre': item.producto.nombre,
+            'imagen': item.producto.imagen.url if item.producto.imagen else '',
+            'precio': str(item.precio_unitario_en_guia), # Precio guardado en el item
+            'cantidad': item.cantidad
         } for item in guia.items_guia.all()
     ])
-    tabla_post_data_json = None # Para repopular si el form principal falla en POST
 
     if request.method == 'POST':
         form = GuiaEnvioForm(request.POST, instance=guia)
-        # Capturar datos de la tabla del POST
+        
+        # Lógica para repopular la tabla JS si el form principal falla (opcional pero bueno para UX)
         productos_en_post_para_repopular = []
         i = 0
         while f'productos[{i}][id]' in request.POST:
             try:
-                producto_id = request.POST[f'productos[{i}][id]']
-                producto_obj_temp = Producto.objects.get(id=producto_id)
-                productos_en_post_para_repopular.append({
-                    'id': producto_id,
-                    'nombre': request.POST.get(f'productos[{i}][nombre]', producto_obj_temp.nombre),
-                    'precio': request.POST.get(f'productos[{i}][precio]', str(producto_obj_temp.precio)),
-                    'cantidad': request.POST[f'productos[{i}][cantidad]'],
-                    'imagen': producto_obj_temp.imagen.url if producto_obj_temp.imagen else 'https://via.placeholder.com/50'
-                })
-            except: pass # Ignorar errores al recolectar para repopulación
-            i += 1
-        if productos_en_post_para_repopular:
-            tabla_post_data_json = json.dumps(productos_en_post_para_repopular)
+                prod_id = request.POST[f'productos[{i}][id]']
+                # Intenta obtener el producto para la imagen, si no, usa placeholder
+                try:
+                    prod_obj_temp = Producto.objects.get(id=prod_id)
+                    imagen_url = prod_obj_temp.imagen.url if prod_obj_temp.imagen else ''
+                except Producto.DoesNotExist:
+                    imagen_url = ''
 
+                productos_en_post_para_repopular.append({
+                    'id': prod_id,
+                    'nombre': request.POST.get(f'productos[{i}][nombre]', f'Producto ID {prod_id}'),
+                    'precio': request.POST.get(f'productos[{i}][precio]', '0.00'),
+                    'cantidad': request.POST[f'productos[{i}][cantidad]'],
+                    'imagen': imagen_url
+                })
+            except Exception as e:
+                print(f"Error repopulando item {i} del POST: {e}")
+            i += 1
+        
+        # Usar los datos del POST para repopular si existen, sino los originales
+        items_para_js = json.dumps(productos_en_post_para_repopular) if productos_en_post_para_repopular else items_actuales_json
 
         if form.is_valid():
             try:
-                guia_actualizada = form.save(commit=False)
+                guia_actualizada = form.save(commit=False) # No guardar aún, necesitamos procesar items
+
+                # Procesar los items de la tabla JS (similar a crear_guia)
                 items_nuevos_para_db = []
                 idx = 0
                 hay_productos_en_tabla = False
-                primer_producto_obj_de_tabla_post = None
-                primera_cantidad_de_tabla_post = 1
 
                 while f'productos[{idx}][id]' in request.POST:
                     hay_productos_en_tabla = True
                     producto_id_str = request.POST[f'productos[{idx}][id]']
                     cantidad_str = request.POST[f'productos[{idx}][cantidad]']
+                    # El precio DEBE venir del frontend ahora, ya que es el precio en la tabla
+                    precio_unitario_str = request.POST.get(f'productos[{idx}][precio]', '0.00')
+
+
                     try:
                         producto_id = int(producto_id_str)
                         cantidad_item = int(cantidad_str)
+                        precio_unitario_item = Decimal(precio_unitario_str)
+
                         if cantidad_item <= 0:
-                            raise ValueError("Cantidad debe ser positiva.")
+                            raise ValueError("La cantidad debe ser positiva.")
+                        if precio_unitario_item < 0:
+                            raise ValueError("El precio no puede ser negativo.")
+
                     except ValueError as ve:
-                        messages.error(request, f"Datos inválidos para el producto {idx+1} en la tabla: {ve}")
-                        return render(request, 'guias/editar_guia.html', {'form': form, 'guia': guia, 'items_actuales_json': tabla_post_data_json if tabla_post_data_json else items_actuales_original_json, 'error_productos': True})
+                        messages.error(request, f"Datos inválidos para el producto #{idx+1} en la tabla: {ve}")
+                        return render(request, 'guias/editar_guia.html', {
+                            'form': form, 'guia': guia, 'items_actuales_json': items_para_js, 'error_productos': True
+                        })
 
                     producto_obj_item = get_object_or_404(Producto, id=producto_id)
-                    if idx == 0:
-                        primer_producto_obj_de_tabla_post = producto_obj_item
-                        primera_cantidad_de_tabla_post = cantidad_item
-
                     items_nuevos_para_db.append(
                         GuiaEnvioProducto(
-                            guia_envio=guia_actualizada,
+                            # guia_envio se asignará después de guardar la guía principal
                             producto=producto_obj_item,
                             cantidad=cantidad_item,
-                            precio_unitario_en_guia=producto_obj_item.precio
+                            precio_unitario_en_guia=precio_unitario_item # Precio de la tabla
                         )
                     )
                     idx += 1
 
                 if not hay_productos_en_tabla:
-                    messages.error(request, "Debe haber al menos un producto en la tabla.")
-                    return render(request, 'guias/editar_guia.html', {'form': form, 'guia': guia, 'items_actuales_json': tabla_post_data_json if tabla_post_data_json else items_actuales_original_json, 'error_productos': True})
+                    messages.error(request, "Debe haber al menos un producto en la tabla de la guía.")
+                    return render(request, 'guias/editar_guia.html', {
+                        'form': form, 'guia': guia, 'items_actuales_json': items_para_js, 'error_productos': True
+                    })
 
-                if primer_producto_obj_de_tabla_post:
-                    guia_actualizada.producto = primer_producto_obj_de_tabla_post
-                    guia_actualizada.cantidad = primera_cantidad_de_tabla_post
-                else:
-                    guia_actualizada.producto = None
-                    guia_actualizada.cantidad = None
+                # Guardar la guía principal
+                guia_actualizada.save() # Ahora se guarda con el código de seguimiento actualizado y otros campos
 
-                guia_actualizada.save()
-                guia.items_guia.all().delete()
+                # Actualizar items: Borrar los antiguos y crear los nuevos
+                guia_actualizada.items_guia.all().delete() # Borra todos los items anteriores de esta guía
+                
+                for item_db_obj in items_nuevos_para_db:
+                    item_db_obj.guia_envio = guia_actualizada # Asignar la guía recién guardada/actualizada
+                
                 if items_nuevos_para_db:
                     GuiaEnvioProducto.objects.bulk_create(items_nuevos_para_db)
 
                 messages.success(request, f'Guía #{guia.id} actualizada correctamente.')
                 return redirect('ver_guia', id=guia.id)
+            
+            except Producto.DoesNotExist:
+                messages.error(request, 'Error: Uno de los productos seleccionados en la tabla ya no existe.')
             except Exception as e:
-                messages.error(request, f"Error al actualizar la guía: {str(e)}")
-                return render(request, 'guias/editar_guia.html', {'form': form, 'guia': guia, 'items_actuales_json': tabla_post_data_json if tabla_post_data_json else items_actuales_original_json})
-        else: # Si form principal no es válido
+                messages.error(request, f'Error inesperado al actualizar la guía: {str(e)}')
+        else: # Formulario GuiaEnvioForm no es válido
             error_list = []
             for field, errors_list_form in form.errors.items():
                 field_label = form.fields[field].label if field in form.fields and hasattr(form.fields[field], 'label') and form.fields[field].label else field
                 for error_item in errors_list_form:
                     error_list.append(f"Error en '{field_label}': {error_item}")
-            messages.error(request, f"Por favor corrige los errores en el formulario principal: {'; '.join(error_list)}")
-            return render(request, 'guias/editar_guia.html', {
-                'form': form,
-                'guia': guia,
-                'items_actuales_json': tabla_post_data_json if tabla_post_data_json else items_actuales_original_json
-            })
+            messages.error(request, f"Por favor corrige los errores en el formulario: {'; '.join(error_list)}")
+        
+        # Si el form principal o el procesamiento de items falló, renderizar de nuevo con errores
+        # y con los datos de la tabla que el usuario intentó enviar (o los originales si no hubo POST de tabla)
+        return render(request, 'guias/editar_guia.html', {
+            'form': form,
+            'guia': guia,
+            'items_actuales_json': items_para_js # Para repopular JS
+        })
+
     else: # GET request
         form = GuiaEnvioForm(instance=guia)
 
     return render(request, 'guias/editar_guia.html', {
         'form': form,
         'guia': guia,
-        'items_actuales_json': items_actuales_original_json
+        'items_actuales_json': items_actuales_json # Para la carga inicial del JS
     })
 
 

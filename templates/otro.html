@@ -1,5 +1,336 @@
 
+              
+              
+              
+              
+    {% extends 'base.html' %}
+{% load static %} {# Ensure static is loaded if you use it for form media or custom JS #}
+
+{% block title %}Editar Guía #{{ form.instance.id|default:guia.id }} - HOKO{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form method="post" enctype="multipart/form-data"> {# enctype is needed if your form handles file uploads (e.g., item images) #}
+        {% csrf_token %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                {# Use form.instance.id if available (when form is bound), otherwise guia.id #}
+                <h1 class="h4 mb-0">Editar Guía de Envío #{{ form.instance.id|default:guia.id }}</h1>
+            </div>
+            <div class="card-body">
+                {# Display non-field errors from the form #}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-4">
+                        {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
                 {% endif %}
+
+                {# Display messages framework messages (e.g., success messages after save) #}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show mb-4" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row mb-3"> {# Reduced bottom margin from mb-4 to mb-3 as per your new structure #}
+                    <div class="col-md-6">
+                        <h4>Información del Cliente</h4>
+                        <div class="form-group mb-3"> {# Using .form-group from your new structure, will style it later #}
+                            <label for="{{ form.cliente_nombre.id_for_label }}" class="form-label">{{ form.cliente_nombre.label }} *</label>
+                            {{ form.cliente_nombre }}
+                            {% for error in form.cliente_nombre.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_telefono.id_for_label }}" class="form-label">{{ form.cliente_telefono.label }} *</label>
+                            {{ form.cliente_telefono }}
+                            {% for error in form.cliente_telefono.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_ciudad.id_for_label }}" class="form-label">{{ form.cliente_ciudad.label }} *</label>
+                            {{ form.cliente_ciudad }}
+                            {% for error in form.cliente_ciudad.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                         <div class="form-group mb-3">
+                            <label for="{{ form.cliente_direccion.id_for_label }}" class="form-label">{{ form.cliente_direccion.label }} *</label>
+                            {{ form.cliente_direccion }}
+                            {% for error in form.cliente_direccion.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cliente_direccion2.id_for_label }}" class="form-label">{{ form.cliente_direccion2.label }}</label>
+                            {{ form.cliente_direccion2 }}
+                            {% for error in form.cliente_direccion2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4>Detalles del Envío</h4>
+                        {# --- SECCIÓN MODIFICADA PARA MOSTRAR form.producto y form.cantidad --- #}
+                        {% if form.producto %} {# Check if the field exists in the form #}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.producto.id_for_label }}" class="form-label">{{ form.producto.label }} *</label>
+                            {{ form.producto }} {# Esto mostrará el <select> para el producto principal #}
+                            {% for error in form.producto.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if form.cantidad %} {# Check if the field exists in the form #}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cantidad.id_for_label }}" class="form-label">{{ form.cantidad.label }} *</label>
+                            {{ form.cantidad }} {# Esto mostrará el input numérico para la cantidad #}
+                            {% for error in form.cantidad.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endif %}
+                        {# --- FIN DE SECCIÓN MODIFICADA --- #}
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }} *</label>
+                            {{ form.estado }}
+                            {% for error in form.estado.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.contenido_resumen.id_for_label }}" class="form-label">{{ form.contenido_resumen.label }}</label>
+                            {{ form.contenido_resumen }}
+                            {% for error in form.contenido_resumen.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                            {% if form.contenido_resumen.help_text %}<small class="form-text text-muted">{{ form.contenido_resumen.help_text }}</small>{% endif %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label">{{ form.observaciones.label }}</label>
+                            {{ form.observaciones }}
+                            {% for error in form.observaciones.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                {# The detailed product table from the original detail view is intentionally removed as per your new structure.
+                   If you need to display or edit items, you'll need formsets or a different approach. #}
+
+                <hr class="mt-4 mb-4"> {# Adding a horizontal rule before action buttons #}
+
+                <div class="mt-4 d-flex justify-content-between align-items-center"> {# Re-using this div for buttons #}
+                    <a href="{% url 'ver_guia' form.instance.id|default:guia.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success"> {# Using btn-success for saving #}
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    /* --- Base Card and Header Styles (from original detail CSS) --- */
+    .container.mt-4 > .card.shadow-sm {
+      border: none;
+      border-radius: 10px;
+    }
+
+    .container.mt-4 > .card > .card-header.bg-primary {
+      background-color: #070E27 !important;
+      color: white;
+      border-bottom: 1px solid #1E3A8A;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+      padding: 1rem 1.5rem;
+    }
+
+    .container.mt-4 > .card > .card-header h1.h4 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.75rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    .container.mt-4 > .card > .card-body {
+      padding: 2rem;
+    }
+
+    /* --- Section Headers (h4 inside card-body) --- */
+    .container.mt-4 > .card > .card-body h4 {
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1.25rem;
+      color: #070E27;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #070E27;
+    }
+    .container.mt-4 > .card > .card-body h4:first-of-type {
+      margin-top: 0;
+    }
+
+    /* --- Form Element Styling --- */
+    /* General form group styling */
+    .form-group {
+        margin-bottom: 1.25rem; /* Consistent spacing */
+    }
+
+    .form-label {
+        display: block; /* Make labels take full width */
+        font-weight: 600; /* Bolder labels */
+        color: #070E27; /* HOKO primary text for labels */
+        margin-bottom: .5rem;
+        font-size: 0.95rem;
+    }
+
+    /* Style for text inputs, textareas, selects generated by Django forms */
+    .form-control,
+    .form-select { /* Bootstrap 5 classes */
+        display: block;
+        width: 100%;
+        padding: .5rem .75rem; /* Adjust padding for a cleaner look */
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border-radius: 5px; /* HOKO-like border-radius */
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #1E3A8A; /* HOKO accent blue for focus */
+        outline: 0;
+        box-shadow: 0 0 0 .2rem rgba(30, 58, 138,.25); /* HOKO accent blue shadow */
+    }
+
+    /* Style for Django's Textarea widget */
+    textarea.form-control {
+        min-height: 80px; /* Ensure textareas have a decent default height */
+    }
+
+    /* Error message styling */
+    .invalid-feedback.d-block {
+        display: block !important;
+        width: 100%;
+        margin-top: .25rem;
+        font-size: .875em;
+        color: #DC3545; /* Standard Bootstrap danger color */
+    }
+    .form-control.is-invalid,
+    .form-select.is-invalid { /* If you use Django Crispy Forms or add these classes manually */
+        border-color: #DC3545;
+    }
+    .form-control.is-invalid:focus,
+    .form-select.is-invalid:focus {
+        box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25);
+    }
+
+
+    /* --- Horizontal Rule --- */
+    .container.mt-4 > .card > .card-body hr {
+      border-top: 1px solid #ccc;
+      /* margin-top: 2rem; /* Controlled by mt-4 mb-4 classes on hr element now */
+      /* margin-bottom: 2rem; */
+    }
+
+    /* --- Action Buttons (re-using styles from original detail, with modifications for Save button) --- */
+    .container.mt-4 > .card .mt-4.d-flex { /* The div containing buttons */
+      padding-top: 1.5rem;
+      /* border-top: 1px solid #e0e0e0; /* Removed, hr tag used instead */
+    }
+
+    .container.mt-4 > .card .btn {
+      padding: 0.6rem 1.2rem;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      text-decoration: none; /* Ensure links styled as buttons don't have underlines */
+      vertical-align: middle;
+      white-space: nowrap; /* Prevent button text from wrapping */
+    }
+    .container.mt-4 > .card .btn:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+
+    .container.mt-4 > .card .btn i {
+      margin-right: 0.5em;
+    }
+
+    /* Cancel Button (btn-secondary) */
+    .container.mt-4 > .card .btn-secondary {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      color: white;
+    }
+    .container.mt-4 > .card .btn-secondary:hover {
+      background-color: #5a6268;
+      border-color: #545b62;
+    }
+
+    /* Save Changes Button (btn-success) */
+    .container.mt-4 > .card .btn-success {
+      background-color: #198754; /* Bootstrap success green */
+      border-color: #198754;
+      color: white;
+    }
+    .container.mt-4 > .card .btn-success:hover {
+      background-color: #157347;
+      border-color: #146c43;
+    }
+
+    /* --- Bootstrap Helper Classes (if not globally available via Bootstrap CSS) --- */
+    /* These were in your new target's inline style, better to have them defined if Bootstrap isn't fully loaded or to ensure consistency */
+    .row { display: flex; flex-wrap: wrap; margin-right: -15px; margin-left: -15px; } /* Assuming Bootstrap grid structure */
+    .col-md-6 { position: relative; width: 100%; padding-right: 15px; padding-left: 15px; flex: 0 0 50%; max-width: 50%; }
+    .mb-3 { margin-bottom: 1rem !important; }
+    .mb-4 { margin-bottom: 1.5rem !important; }
+    .mt-4 { margin-top: 1.5rem !important; }
+    .alert { position: relative; padding: 1rem 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: .25rem; }
+    .alert-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+    .alert-info { color: #052c65; background-color: #cfe2ff; border-color: #b6d4fe;}
+    .alert-success { color: #0a3622; background-color: #d1e7dd; border-color: #badbcc;}
+    .alert-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5;}
+    .btn-close { box-sizing: content-box; width: 1em; height: 1em; padding: .25em .25em; color: #000; background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat; border:0; border-radius:.25rem; opacity:.5; float: right; }
+    .btn-close:hover { opacity: .75; }
+    .text-muted { color: #6c757d !important; }
+
+</style>
+{% endblock %}          
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              {% endif %}
 
                 <div class="row mb-4">
                     <div class="col-md-6">
