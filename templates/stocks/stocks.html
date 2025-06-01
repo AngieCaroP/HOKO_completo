@@ -4,59 +4,88 @@
 
 {% block content %}
 
+{# Librerías JS para exportar #}
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <div class="products-container">
   <h1>Gestión de Stocks</h1>
   
-  <!-- Barra de acciones -->
   <div class="products-actions">
-    <input type="text" id="search-input" placeholder="Buscar stock..." class="search-input">
+    <input type="text" id="hoko-stocks-search-input" placeholder="Buscar por ID, producto, ref..." class="search-input" value="{{ search_query|default:'' }}">
     
     <div class="action-buttons">
-      <a href="{% url 'listar_stocks' %}" class="btn btn-secondary">
+      <a href="{% url 'listar_stocks' %}" class="btn btn-secondary" title="Limpiar filtros y búsqueda">
         <i class="fas fa-sync-alt"></i> Limpiar
-    </a>
+      </a>
       <a href="{% url 'crear_stock' %}" class="btn crear">➕ Nuevo Stock</a>
       
-      <!-- Filtros -->
-      <div class="popover-container">
-        <button type="button" class="popover-toggle btn" id="togglePopover">🛠️ Filtros</button>
-        <div class="popover hidden" id="filterPopover">
-      <div class="filters">
-        <select id="filter-status" class="filter-select">
-          <option value="">Todos los estados</option>
-          <option value="ok">Stock OK</option>
-          <option value="bajo">Stock Bajo</option>
-          <option value="sin">Sin Stock</option>
-        </select>
-        
-        <select id="filter-bodega" class="filter-select">
-          <option value="">Todas las bodegas</option>
-          <!-- Bodegas dinámicas de la base de datos -->
-          {% for bodega in bodegas %}
-          <option value="{{ bodega.id }}">{{ bodega.nombre|upper }}</option>
-          {% endfor %}
-        </select>
-        <button class="exportar">⬇ Exportar como TXT</button>
-        <button class="exportarExcel">⬇ Exportar como Excel</button>
-        <button class="exportarPdf">⬇ Exportar como PDF</button>
-    
+      <div class="hoko-popover-wrapper" style="position: relative;">
+        <button type="button" id="hoko-stocks-toggle-button" class="btn hoko-special-popover-trigger">🛠️ Filtros</button>
+        <div id="hoko-stocks-filter-content" class="hoko-special-popover-content hoko-is-hidden" style="position: absolute; background-color: white; border: 1px solid #ccc; padding: 20px; z-index: 1000; top: 100%; right: 0; min-width: 250px; border-radius: 5px;"> {# Aumenté un poco el min-width #}
+            <h4>Filtros Avanzados</h4>
+            
+            <label for="hoko-stocks-filter-status-select" style="display:block; margin-bottom:3px;">Estado:</label>
+            <select id="hoko-stocks-filter-status-select" name="estado" class="filter-select" style="width:100%; margin-bottom:10px; padding: 5px;">
+                <option value="" {% if not estado_selected %}selected{% endif %}>Todos los Estados</option>
+                <option value="ok" {% if estado_selected == "ok" %}selected{% endif %}>Stock OK</option>
+                <option value="bajo" {% if estado_selected == "bajo" %}selected{% endif %}>Stock Bajo</option>
+                <option value="sin" {% if estado_selected == "sin" %}selected{% endif %}>Sin Stock</option>
+            </select>
+
+            <label for="hoko-stocks-filter-bodega-select" style="display:block; margin-bottom:3px;">Bodega:</label>
+            <select id="hoko-stocks-filter-bodega-select" name="bodega_id" class="filter-select" style="width:100%; margin-bottom:10px; padding: 5px;">
+                <option value="" {% if not bodega_id_selected %}selected{% endif %}>Todas las Bodegas</option>
+                {% for bodega_item in bodegas_all %}
+                <option value="{{ bodega_item.id }}" {% if bodega_id_selected|stringformat:"s" == bodega_item.id|stringformat:"s" %}selected{% endif %}>
+                    {{ bodega_item.nombre|upper }}
+                </option>
+                {% endfor %}
+            </select>
+
+            {# --- NUEVO DESPLEGABLE PARA PRODUCTOS --- #}
+            <label for="hoko-stocks-filter-producto-select" style="display:block; margin-bottom:3px;">Producto:</label>
+            <select id="hoko-stocks-filter-producto-select" name="producto_id" class="filter-select" style="width:100%; margin-bottom:10px; padding: 5px;">
+                <option value="" {% if not producto_id_selected %}selected{% endif %}>Todos los Productos</option>
+                {% for prod_item in productos_all %}
+                <option value="{{ prod_item.id }}" {% if producto_id_selected|stringformat:"s" == prod_item.id|stringformat:"s" %}selected{% endif %}>
+                    {{ prod_item.nombre }} (Ref: {{ prod_item.referencia|default:"N/A" }})
+                </option>
+                {% endfor %}
+            </select>
+            {# --- FIN NUEVO DESPLEGABLE --- #}
+            
+            <button type="button" id="hoko-stocks-apply-filters-button" class="btn btn-primary" style="width:100%; margin-bottom:10px; padding: 8px;">Aplicar Filtros</button>
+            <button type="button" id="hoko-stocks-export-txt-button" class="btn" style="width:100%; margin-bottom:5px; background-color: #5bc0de; color:white; padding: 8px;">Exportar TXT</button>
+            <button type="button" id="hoko-stocks-export-excel-button" class="btn" style="width:100%; margin-bottom:5px; background-color: #5cb85c; color:white; padding: 8px;">Exportar Excel</button>
+            {# <button type="button" id="hoko-stocks-export-pdf-button" class="btn" style="width:100%; background-color: #d9534f; color:white; padding: 8px;">Exportar PDF</button> #}
+        </div>
       </div>
     </div>
   </div>
-</div>
-  </div>
 
-  <!-- Tabla de stocks -->
-  <div class="table-wrapper">
+  {% if messages %}
+    <ul class="messages" style="list-style-type: none; padding: 0; margin-top:15px;">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %} 
+           style="padding: 10px; margin-bottom: 10px; border-radius: 4px; 
+                  {% if message.tags == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                  {% elif message.tags == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                  {% elif message.tags == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+                  else %}background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;{% endif %}">
+          {{ message }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <div class="table-wrapper" style="margin-top:15px;">
     <table class="products-table" id="stocks-table">
       <thead>
         <tr>
-          <th><input type="checkbox" id="select-all"></th>
+          <th><input type="checkbox" id="hoko-stocks-select-all-checkbox"></th>
           <th>ID</th>
           <th>Producto</th>
           <th>Bodega</th>
@@ -67,42 +96,42 @@
         </tr>
       </thead>
       <tbody>
-        {% for stock in stocks %}
-        
-        <tr data-id="{{ stock.id }}" 
-            data-producto="{{ stock.producto.nombre|lower }}" 
-            data-bodega="{% if 'guayaquil' in stock.bodega.nombre|lower %}guayaquil{% elif 'quito' in stock.bodega.nombre|lower %}quito{% else %}{{ stock.bodega.id }}{% endif %}"
-            data-status="{% if stock.stock_actual <= 0 %}sin{% elif stock.stock_actual < stock.umbral_minimo %}bajo{% else %}ok{% endif %}">
-            <td><input type="checkbox" class="select-row" data-id="{{ stock.id }}"></td>
-            <td>{{ stock.id }}</td>
-          <td>{{ stock.producto.nombre }}</td>
-          <td>
-            {% if 'guayaquil' in stock.bodega.nombre|lower %}
-              GUAYAQUIL
-            {% elif 'quito' in stock.bodega.nombre|lower %}
-              QUITO 
-            {% else %}
-              {{ stock.bodega.nombre }}
-            {% endif %}
-          </td>
-          <td>{{ stock.stock_actual }}</td>
-          <td>{{ stock.umbral_minimo }}</td>
-          <td>
-            {% if stock.stock_actual <= 0 %}
-              <span class="status-badge sin-stock">Sin Stock</span>
-            {% elif stock.stock_actual < stock.umbral_minimo %}
-              <span class="status-badge bajo-stock">Bajo Stock</span>
-            {% else %}
-              <span class="status-badge ok-stock">OK</span>
-            {% endif %}
-          </td>
-
-          <td>
-            <a href="{% url 'ver_stock' stock.id %}" class="btn ver">👁️</a>
-            <a href="{% url 'editar_stock' stock.id %}" class="btn editar">✏️</a>
-            <a href="{% url 'eliminar_stock' stock.id %}" class="btn eliminar">🗑️</a>
-          </td>
-
+        {% for stock_item in stocks %}
+        <tr data-id="{{ stock_item.id }}" 
+            data-producto="{{ stock_item.producto.nombre|lower }}" 
+            data-bodega-id="{{ stock_item.bodega.id }}"
+            data-status="{{ stock_item.estado|lower }}">
+            <td><input type="checkbox" class="hoko-stocks-select-row-checkbox" data-id="{{ stock_item.id }}"></td>
+            <td>{{ stock_item.id }}</td>
+            <td>{{ stock_item.producto.nombre }}<br><small>Ref: {{ stock_item.producto.referencia|default:"N/A" }}</small></td>
+            <td>{{ stock_item.bodega.nombre|upper }}</td>
+            <td>{{ stock_item.stock_actual }}</td>
+            <td>{{ stock_item.umbral_minimo }}</td>
+            <td>
+              <span class="status-badge 
+                {% if stock_item.estado == 'sin' %}sin-stock 
+                {% elif stock_item.estado == 'bajo' %}bajo-stock 
+                {% elif stock_item.estado == 'ok' %}ok-stock
+                {% endif %}"
+                style="/* tus estilos de badge */">
+                {{ stock_item.get_estado_display }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'ver_stock' stock_item.id %}" class="btn ver">👁️</a>
+              <a href="{% url 'editar_stock' stock_item.id %}" class="btn editar">✏️</a>
+              <a href="{% url 'eliminar_stock' stock_item.id %}" class="btn eliminar">🗑️</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8" style="text-align: center; padding: 20px;">
+              {% if search_query or estado_selected or bodega_id_selected or producto_id_selected %} {# ACTUALIZADO #}
+                No hay stocks que coincidan con los filtros aplicados.
+              {% else %}
+                No hay stocks disponibles.
+              {% endif %}
+            </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -110,118 +139,235 @@
   </div>
 </div>
 
+<style>
+  .hoko-is-hidden { display: none !important; }
+  
+  /* Estilos Generales para la Barra de Acciones y sus componentes */
+  .products-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px; 
+    padding: 20px 15px; 
+    background-color: #f8f9fa; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.075); 
+    flex-wrap: wrap; 
+    gap: 15px; 
+  }
+
+  .search-input { 
+    flex-grow: 1; 
+    min-width: 280px; 
+    height: 40px; 
+    padding: 0 12px; 
+    border: 1px solid #ced4da; 
+    border-radius: 6px; 
+    font-size: 0.95rem; 
+    box-sizing: border-box;
+  }
+  .search-input:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+  }
+
+  .action-buttons { 
+    display: flex;
+    align-items: center;
+    gap: 12px; 
+  }
+
+  /* Estilos comunes para los botones en la barra de acciones */
+  .action-buttons .btn,
+  .hoko-popover-wrapper .btn.hoko-special-popover-trigger { 
+    height: 40px; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center; 
+    padding: 0 18px; 
+    white-space: nowrap;
+    box-sizing: border-box;
+    border: 1px solid transparent; 
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: none; /* Para los <a> que son botones */
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  .action-buttons .btn i,
+  .hoko-popover-wrapper .btn.hoko-special-popover-trigger i {
+    margin-right: 6px; 
+  }
+
+  /* Colores específicos de botones principales */
+  .btn.btn-secondary { background-color: #6c757d; color: white; border-color: #6c757d; }
+  .btn.btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
+  
+  .btn.crear { background-color: #28a745; color: white; border-color: #28a745; }
+  .btn.crear:hover { background-color: #218838; border-color: #1e7e34; }
+
+  .btn.hoko-special-popover-trigger { background-color: #007bff; color:white; border-color: #007bff; }
+  .btn.hoko-special-popover-trigger:hover { background-color: #0069d9; border-color: #0062cc; }
+
+  /* Estilos para botones DENTRO del Popover - Normalizados */
+  .hoko-special-popover-content .btn { /* Hereda de .btn pero podemos ajustar padding/width */
+    width: 100%;
+    padding: 9px 12px; /* Padding general para botones de popover */
+    font-size: 0.9em;
+    justify-content: center; /* Centrar texto si no tiene ícono a la izquierda */
+    margin-bottom: 8px; /* Espacio entre botones si se apilan */
+  }
+  .hoko-special-popover-content .btn:last-child {
+    margin-bottom: 0; /* Quitar margen del último botón */
+  }
+  .hoko-special-popover-content .btn.btn-primary { /* Botón principal de aplicar filtros */
+    background-color: #0069d9; color:white; font-weight:bold;
+  }
+  .hoko-special-popover-content .btn.btn-primary:hover { background-color: #0056b3; }
+  
+  .hoko-special-popover-content .btn.btn-info { /* Ejemplo para Exportar TXT */
+    background-color: #17a2b8; color: white; 
+  }
+  .hoko-special-popover-content .btn.btn-info:hover { background-color: #117a8b; }
+
+  .hoko-special-popover-content .btn.btn-success { /* Ejemplo para Exportar Excel */
+    background-color: #28a745; color: white;
+  }
+  .hoko-special-popover-content .btn.btn-success:hover { background-color: #1e7e34;}
+
+  /* Si usas íconos en los botones del popover */
+  .hoko-special-popover-content .btn i {
+    margin-right: 8px;
+  }
+
+
+  /* Estilos para badges de estado en la tabla */
+  .status-ok-stock { background-color: #28a745; /* Verde */ }
+  .status-bajo-stock { background-color: #ffc107; color: #212529 !important; /* Amarillo, texto oscuro */ }
+  .status-sin-stock { background-color: #dc3545; /* Rojo */ }
+
+  /* Estilos para botones de acción en la tabla */
+    .products-table .btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.9em;
+        margin: 0 3px;
+        height: auto;
+        border-radius: 5px;
+        border: none;
+        line-height: 1; 
+    }
+    .products-table .btn.ver { background-color: #17a2b8; color:white; }
+    .products-table .btn.editar { background-color: #ffc107; color:black; }
+    .products-table .btn.eliminar { background-color: #dc3545; color:white; }
+    .products-table .btn:hover { opacity: 0.8; }
+
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Búsqueda instantánea
-  const searchInput = document.getElementById('search-input');
-  const tableRows = document.querySelectorAll('#stocks-table tbody tr');
-  
-  searchInput.addEventListener('input', function() {
-    const term = this.value.trim().toLowerCase();
-    tableRows.forEach(row => {
-      const rowText = row.textContent.toLowerCase();
-      row.style.display = rowText.includes(term) ? '' : 'none';
-    });
-  });
+    console.log("HOKO STOCKS (Filtro Producto Añadido): Script cargado y DOM listo.");
 
-  // Filtros combinados
-  const filterStatus = document.getElementById('filter-status');
-  const filterBodega = document.getElementById('filter-bodega');
-  
-  [filterStatus, filterBodega].forEach(filter => {
-    filter.addEventListener('change', applyFilters);
-  });
+    const hokoToggleButton = document.getElementById('hoko-stocks-toggle-button');
+    const hokoPopoverContent = document.getElementById('hoko-stocks-filter-content');
 
-  function applyFilters() {
-    const statusValue = filterStatus.value;
-    const bodegaValue = filterBodega.value;
-    
-    tableRows.forEach(row => {
-      const rowStatus = row.dataset.status;
-      const rowBodega = row.dataset.bodega;
-      
-      const statusMatch = !statusValue || rowStatus === statusValue;
-      const bodegaMatch = !bodegaValue || rowBodega === bodegaValue;
-      
-      row.style.display = statusMatch && bodegaMatch ? '' : 'none';
-    });
-  }
-  
-  // Inicializar filtros
-  applyFilters();
-});
+    // Inputs de filtro
+    const searchInput = document.getElementById('hoko-stocks-search-input');
+    const statusSelect = document.getElementById('hoko-stocks-filter-status-select');
+    const bodegaSelect = document.getElementById('hoko-stocks-filter-bodega-select');
+    const productoSelect = document.getElementById('hoko-stocks-filter-producto-select'); // NUEVO SELECTOR
 
+    // Botones de acción del popover
+    const applyFiltersBtn = document.getElementById('hoko-stocks-apply-filters-button');
+    const exportTxtBtn = document.getElementById('hoko-stocks-export-txt-button');
+    const exportExcelBtn = document.getElementById('hoko-stocks-export-excel-button');
+    // const exportPdfBtn = document.getElementById('hoko-stocks-export-pdf-button');
 
-   // Función para obtener los datos visibles de la tabla
-   function obtenerDatosDeTabla() {
-    const rows = document.querySelectorAll('#stocks-table tbody tr');
-    const datos = [];
-
-    rows.forEach(row => {
-      if (row.style.display !== 'none') {
-        const celdas = row.querySelectorAll('td');
-        datos.push({
-          ID: celdas[1].innerText.trim(),
-          Producto: celdas[2].innerText.trim(),
-          Bodega: celdas[3].innerText.trim(),
-          Stock: celdas[4].innerText.trim(),
-          Umbral: celdas[5].innerText.trim(),
-          Estado: celdas[6].innerText.trim()
+    // --- Visibilidad del Popover ---
+    if (hokoToggleButton && hokoPopoverContent) {
+        hokoToggleButton.addEventListener('click', function(event) {
+            event.stopPropagation();
+            hokoPopoverContent.classList.toggle('hoko-is-hidden');
         });
-      }
+        document.addEventListener('click', function(event) {
+            if (!hokoPopoverContent.classList.contains('hoko-is-hidden') &&
+                !hokoPopoverContent.contains(event.target) &&
+                event.target !== hokoToggleButton && 
+                !hokoToggleButton.contains(event.target)) {
+                hokoPopoverContent.classList.add('hoko-is-hidden');
+            }
+        });
+    } else { /* ... (mensajes de error si no se encuentran) ... */ }
+
+    // --- Función para construir URL y redirigir ---
+    function buildAndRedirect(exportType = null) {
+        const baseUrl = "{% url 'listar_stocks' %}"; 
+        const params = new URLSearchParams();
+
+        const searchTerm = searchInput.value.trim();
+        const estado = statusSelect.value;
+        const bodegaId = bodegaSelect.value;
+        const productoId = productoSelect.value; // NUEVO: leer valor del filtro de producto
+
+        if (searchTerm) params.append('search', searchTerm);
+        if (estado) params.append('estado', estado);
+        if (bodegaId) params.append('bodega_id', bodegaId);
+        if (productoId) params.append('producto_id', productoId); // NUEVO: añadir a parámetros
+        if (exportType) params.append('export_format', exportType);
+
+        const finalUrl = `${baseUrl}?${params.toString()}`;
+        console.log("HOKO STOCKS: Redirigiendo a:", finalUrl);
+        window.location.href = finalUrl;
+    }
+
+    // --- Event Listeners para botones de acción ---
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() { buildAndRedirect(); if (hokoPopoverContent) hokoPopoverContent.classList.add('hoko-is-hidden'); });
+    }
+    if (exportTxtBtn) {
+        exportTxtBtn.addEventListener('click', function() { buildAndRedirect('txt'); if (hokoPopoverContent) hokoPopoverContent.classList.add('hoko-is-hidden'); });
+    }
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', function() { buildAndRedirect('excel'); if (hokoPopoverContent) hokoPopoverContent.classList.add('hoko-is-hidden'); });
+    }
+    // if (exportPdfBtn) { /* ... */ }
+
+
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                buildAndRedirect();
+            }
+        });
+    }
+
+    // --- Lógica para Select All Checkbox (sin cambios) ---
+    const hokoSelectAll = document.getElementById('hoko-stocks-select-all-checkbox');
+    const hokoRowCheckboxes = document.querySelectorAll('.hoko-stocks-select-row-checkbox');
+    // ... (resto del código de checkboxes sin cambios) ...
+    if (hokoSelectAll) {
+        hokoSelectAll.addEventListener('change', function() {
+            hokoRowCheckboxes.forEach(checkbox => {
+                checkbox.checked = hokoSelectAll.checked;
+            });
+        });
+    }
+    hokoRowCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (!this.checked) {
+                if (hokoSelectAll) hokoSelectAll.checked = false;
+            } else {
+                const allChecked = Array.from(hokoRowCheckboxes).every(cb => cb.checked);
+                if (hokoSelectAll) hokoSelectAll.checked = allChecked;
+            }
+        });
     });
 
-    return datos;
-  }
-
-  // Exportar como TXT
-  document.querySelector('.exportar').addEventListener('click', function () {
-    const datos = obtenerDatosDeTabla();
-    let contenido = 'ID\tProducto\tBodega\tStock\tUmbral\tEstado\n';
-
-    datos.forEach(item => {
-      contenido += `${item.ID}\t${item.Producto}\t${item.Bodega}\t${item.Stock}\t${item.Umbral}\t${item.Estado}\n`;
-    });
-
-    const blob = new Blob([contenido], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `stocks_${new Date().toISOString().split('T')[0]}.txt`;
-    a.click();
-  });
-
-  // Exportar como Excel
-  document.querySelector('.exportarExcel').addEventListener('click', function () {
-    const datos = obtenerDatosDeTabla();
-    const libro = XLSX.utils.book_new();
-    const hoja = XLSX.utils.json_to_sheet(datos);
-    XLSX.utils.book_append_sheet(libro, hoja, 'Stocks');
-    XLSX.writeFile(libro, `stocks_${new Date().toISOString().split('T')[0]}.xlsx`);
-  });
-
-  // Exportar como PDF
-  document.querySelector('.exportarPdf').addEventListener('click', function () {
-    const datos = obtenerDatosDeTabla();
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(14);
-    doc.text('Reporte de Stocks', 105, 15, { align: 'center' });
-
-    const headers = [['ID', 'Producto', 'Bodega', 'Stock', 'Umbral', 'Estado']];
-    const rows = datos.map(item => [
-      item.ID, item.Producto, item.Bodega, item.Stock, item.Umbral, item.Estado
-    ]);
-
-    doc.autoTable({
-      startY: 25,
-      head: headers,
-      body: rows,
-      styles: { fontSize: 10 }
-    });
-
-    doc.save(`stocks_${new Date().toISOString().split('T')[0]}.pdf`);
-  });
-
+});
 </script>
-
-
 {% endblock %}

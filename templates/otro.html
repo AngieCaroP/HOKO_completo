@@ -1,5 +1,1358 @@
+# envios/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q, Sum
+from django.views.decorators.http import require_GET
+from django.db import transaction
+from datetime import datetime
+import json
+from .models import Producto, Stock, Bodega, GuiaEnvio, GuiaEnvioProducto, Campaign
+from .forms import ProductoForm, StockForm, BodegaForm, GuiaEnvioForm
+from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
+from django.http import JsonResponse, HttpResponse
+import csv
+import traceback
 
-              
+# --- Imports for Export Functionality ---
+from django.utils import timezone
+import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font
+from io import BytesIO
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from django.urls import reverse
+
+# --- Vistas de Producto ---
+def listar_productos(request):
+    search_query = request.GET.get('search', '').strip()
+    productos = Producto.objects.all()
+    if search_query:
+        try:
+            id_query = int(search_query)
+            productos = productos.filter(Q(id=id_query))
+        except ValueError:
+            productos = productos.filter(
+                Q(nombre__icontains=search_query) | Q(referencia__icontains=search_query)
+            )
+    return render(request, 'productos/productos.html', {'productos': productos, 'search_query': search_query})
+
+def crear_producto(request):
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Producto creado correctamente.')
+            return redirect('listar_productos')
+    else:
+        form = ProductoForm()
+    return render(request, 'productos/crear_producto.html', {'form': form})
+
+def ver_producto(request, id):
+    producto = get_object_or_404(Producto, id=id)
+    return render(request, 'productos/ver_producto.html', {'producto': producto})
+
+def editar_producto(request, id):
+    producto = get_object_or_404(Producto, id=id)
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, request.FILES, instance=producto)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_productos')
+    else:
+        form = ProductoForm(instance=producto)
+    return render(request, 'productos/editar_producto.html', {'form': form})
+
+def eliminar_producto(request, id):
+    producto = get_object_or_404(Producto, id=id)
+    if request.method == 'POST':
+        producto.delete()
+        messages.success(request, f'Producto "{producto.nombre}" eliminado correctamente.')
+        return redirect('listar_productos')
+    return render(request, 'productos/eliminar_producto.html', {'producto': producto})
+
+# --- Vistas de Stock ---
+def listar_stocks(request):
+    stocks = Stock.objects.select_related('producto', 'bodega').all()
+    if not stocks.exists():
+        messages.info(request, "No hay registros de stock disponibles.")
+    return render(request, 'stocks/stocks.html', {'stocks': stocks, 'bodegas': Bodega.objects.all()})
+
+def crear_stock(request):
+    if request.method == 'POST':
+        form = StockForm(request.POST)
+        if form.is_valid():
+            try:
+                nuevo_stock = form.save()
+                messages.success(request, f"Stock para {nuevo_stock.producto.nombre} creado!")
+                return redirect('listar_stocks')
+            except Exception as e:
+                messages.error(request, f"Error al guardar: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error en {field}: {error}")
+    else:
+        form = StockForm()
+    return render(request, 'stocks/crear.html', {'form': form, 'productos': Producto.objects.all(), 'bodegas': Bodega.objects.all()})
+
+def editar_stock(request, id):
+    stock = get_object_or_404(Stock, id=id)
+    if request.method == 'POST':
+        form = StockForm(request.POST, instance=stock)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Stock actualizado.')
+            return redirect('listar_stocks')
+    else:
+        form = StockForm(instance=stock)
+    return render(request, 'stocks/editar_stock.html', {'form': form})
+
+def eliminar_stock(request, id):
+    stock = get_object_or_404(Stock, id=id)
+    if request.method == 'POST':
+        stock.delete()
+        messages.success(request, 'Stock eliminado.')
+        return redirect('listar_stocks')
+    return render(request, 'stocks/eliminar_stock.html', {'stock': stock})
+
+def ver_stock(request, id):
+    stock = get_object_or_404(Stock, id=id)
+    return render(request, 'stocks/ver_stock.html', {'stock': stock})
+
+# --- Vistas de Bodega ---
+def listar_bodegas(request):
+    search_query = request.GET.get('search', '').strip()
+    bodegas = Bodega.objects.all()
+    if search_query:
+        try:
+            id_query = int(search_query)
+            bodegas = bodegas.filter(Q(id=id_query))
+        except ValueError:
+            bodegas = bodegas.filter(
+                Q(nombre__icontains=search_query) | Q(direccion__icontains=search_query) | Q(telefono__icontains=search_query)
+            )
+    return render(request, 'bodegas/listar_bodegas.html', {'bodegas': bodegas, 'search_query': search_query})
+
+def crear_bodega(request):
+    if request.method == 'POST':
+        form = BodegaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Bodega creada.')
+            return redirect('listar_bodegas')
+    else:
+        form = BodegaForm()
+    return render(request, 'bodegas/crear_bodega.html', {'form': form})
+
+def editar_bodega(request, id):
+    bodega = get_object_or_404(Bodega, id=id)
+    if request.method == 'POST':
+        form = BodegaForm(request.POST, instance=bodega)
+        if form.is_valid():
+            form.save()
+            return redirect('listar_bodegas')
+    else:
+        form = BodegaForm(instance=bodega)
+    return render(request, 'bodegas/editar_bodega.html', {'form': form})
+
+def eliminar_bodega(request, id):
+    bodega = get_object_or_404(Bodega, id=id)
+    if request.method == 'POST':
+        bodega.delete()
+        return redirect('listar_bodegas')
+    return render(request, 'bodegas/eliminar_bodega.html', {'bodega': bodega})
+
+def ver_bodega(request, id):
+    bodega = get_object_or_404(Bodega, id=id)
+    return render(request, 'bodegas/ver_bodega.html', {'bodega': bodega})
+
+
+# --- API VIEWS ---
+@require_GET
+def search_productos(request):
+    search_query = request.GET.get('search', '').strip()
+    productos_qs = Producto.objects.all()
+
+    if search_query:
+        productos_qs = productos_qs.filter(
+            Q(nombre__icontains=search_query) | Q(referencia__icontains=search_query)
+        )[:10]
+    else:
+        productos_qs = Producto.objects.none()
+
+    results = []
+    for p in productos_qs:
+        results.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'referencia': p.referencia if p.referencia else '',
+            'precio': str(p.precio),
+            'imagen': p.imagen.url if p.imagen else None
+        })
+    return JsonResponse(results, safe=False)
+
+@require_GET
+def producto_detail_api(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    data = {
+        'id': producto.id,
+        'nombre': producto.nombre,
+        'referencia': producto.referencia,
+        'precio': str(producto.precio),
+        'imagen': producto.imagen.url if producto.imagen else None,
+    }
+    return JsonResponse(data)
+
+# --- GUIA DE ENVIO VIEWS ---
+@transaction.atomic
+def crear_guia(request):
+    tabla_productos_data_json = '[]'
+    if request.method == 'POST':
+        form = GuiaEnvioForm(request.POST)
+        productos_en_post_para_repopular = []
+        i = 0
+        while f'productos[{i}][id]' in request.POST:
+            try:
+                prod_id = request.POST[f'productos[{i}][id]']
+                prod_obj = Producto.objects.get(id=prod_id)
+                productos_en_post_para_repopular.append({
+                    'id': prod_id,
+                    'nombre': request.POST.get(f'productos[{i}][nombre]', prod_obj.nombre),
+                    'precio': request.POST.get(f'productos[{i}][precio]', str(prod_obj.precio)),
+                    'cantidad': request.POST[f'productos[{i}][cantidad]'],
+                    'imagen': prod_obj.imagen.url if prod_obj.imagen else 'https://via.placeholder.com/50'
+                })
+            except Exception:
+                pass 
+            i += 1
+        if productos_en_post_para_repopular:
+            tabla_productos_data_json = json.dumps(productos_en_post_para_repopular)
+
+        if form.is_valid():
+            try:
+                guia = form.save(commit=False)
+                items_para_crear_en_db = []
+                idx = 0
+                hay_productos_en_tabla = False
+                primer_producto_obj_de_tabla = None
+                primera_cantidad_de_tabla = 1
+
+                while f'productos[{idx}][id]' in request.POST:
+                    hay_productos_en_tabla = True
+                    producto_id_str = request.POST[f'productos[{idx}][id]']
+                    cantidad_str = request.POST[f'productos[{idx}][cantidad]']
+                    precio_unitario_str = request.POST.get(f'productos[{idx}][precio]', '0')
+
+                    try:
+                        producto_id = int(producto_id_str)
+                        cantidad_item = int(cantidad_str)
+                        precio_unitario = Decimal(precio_unitario_str)
+                        if cantidad_item <= 0: raise ValueError("La cantidad debe ser positiva.")
+                        if precio_unitario < 0: raise ValueError("El precio no puede ser negativo.")
+                    except ValueError as ve:
+                        messages.error(request, f"Error en datos de producto {idx+1} de la tabla: {ve}")
+                        return render(request, 'guias/crear_guia.html', {'form': form, 'error_productos': True, 'tabla_productos_data_json': tabla_productos_data_json})
+
+                    producto_obj_item = get_object_or_404(Producto, id=producto_id)
+                    if idx == 0:
+                        primer_producto_obj_de_tabla = producto_obj_item
+                        primera_cantidad_de_tabla = cantidad_item
+
+                    items_para_crear_en_db.append(GuiaEnvioProducto(
+                        producto=producto_obj_item,
+                        cantidad=cantidad_item,
+                        precio_unitario_en_guia=precio_unitario
+                    ))
+                    idx += 1
+                
+                if not hay_productos_en_tabla:
+                    messages.error(request, "Debe agregar al menos un producto a la tabla.")
+                    return render(request, 'guias/crear_guia.html', {'form': form, 'error_productos': True, 'tabla_productos_data_json': tabla_productos_data_json})
+
+                if primer_producto_obj_de_tabla:
+                    guia.producto = primer_producto_obj_de_tabla
+                    guia.cantidad = primera_cantidad_de_tabla
+                else: 
+                    messages.error(request, "Error: No se pudo determinar el producto principal.")
+                    return render(request, 'guias/crear_guia.html', {'form': form, 'tabla_productos_data_json': tabla_productos_data_json})
+                
+                guia.save() 
+
+                for item_db in items_para_crear_en_db:
+                    item_db.guia_envio = guia
+                GuiaEnvioProducto.objects.bulk_create(items_para_crear_en_db)
+
+                messages.success(request, 'Guía creada exitosamente!')
+                return redirect('ver_guia', id=guia.id)
+
+            except Producto.DoesNotExist:
+                messages.error(request, 'Error: Uno de los productos seleccionados no existe.')
+                return render(request, 'guias/crear_guia.html', {'form': form, 'error_productos': True, 'tabla_productos_data_json': tabla_productos_data_json})
+            except Exception as e:
+                messages.error(request, f'Error inesperado al crear la guía: {str(e)}')
+                return render(request, 'guias/crear_guia.html', {'form': form, 'tabla_productos_data_json': tabla_productos_data_json})
+        else:
+            error_list = []
+            for field, errors in form.errors.items():
+                field_label = form.fields[field].label if field in form.fields and hasattr(form.fields[field], 'label') and form.fields[field].label else field
+                for error in errors:
+                    error_list.append(f"Error en '{field_label}': {error}")
+            messages.error(request, f"Por favor corrige los errores: {'; '.join(error_list)}")
+            return render(request, 'guias/crear_guia.html', {'form': form, 'tabla_productos_data_json': tabla_productos_data_json})
+    else:
+        form = GuiaEnvioForm()
+    return render(request, 'guias/crear_guia.html', {'form': form, 'tabla_productos_data_json': tabla_productos_data_json})
+
+@transaction.atomic
+def editar_guia(request, id):
+    guia = get_object_or_404(
+        GuiaEnvio.objects.prefetch_related('items_guia__producto'),
+        id=id
+    )
+    items_actuales_json = json.dumps([
+        {
+            'id': str(item.producto.id),
+            'nombre': item.producto.nombre,
+            'imagen': item.producto.imagen.url if item.producto.imagen else '',
+            'precio': str(item.precio_unitario_en_guia),
+            'cantidad': item.cantidad
+        } for item in guia.items_guia.all()
+    ])
+
+    items_para_js = items_actuales_json
+
+    if request.method == 'POST':
+        form = GuiaEnvioForm(request.POST, instance=guia)
+        
+        productos_en_post_para_repopular = []
+        i = 0
+        while f'productos[{i}][id]' in request.POST:
+            try:
+                prod_id_str = request.POST[f'productos[{i}][id]']
+                imagen_url = ''
+                try: 
+                    prod_obj_temp = Producto.objects.get(id=prod_id_str)
+                    if prod_obj_temp.imagen: imagen_url = prod_obj_temp.imagen.url
+                except Producto.DoesNotExist: pass
+
+                productos_en_post_para_repopular.append({
+                    'id': prod_id_str,
+                    'nombre': request.POST.get(f'productos[{i}][nombre]', f'Producto ID {prod_id_str}'),
+                    'precio': request.POST.get(f'productos[{i}][precio]', '0.00'),
+                    'cantidad': request.POST[f'productos[{i}][cantidad]'],
+                    'imagen': imagen_url
+                })
+            except Exception as e:
+                pass
+            i += 1
+        
+        if productos_en_post_para_repopular:
+            items_para_js = json.dumps(productos_en_post_para_repopular)
+
+        if form.is_valid():
+            try:
+                guia_actualizada = form.save(commit=False) 
+                items_nuevos_para_db = []
+                idx = 0
+                hay_productos_en_tabla = False
+                primer_producto_obj_de_tabla_edit = None 
+                primera_cantidad_de_tabla_edit = 1      
+
+                while f'productos[{idx}][id]' in request.POST:
+                    hay_productos_en_tabla = True
+                    producto_id_str = request.POST[f'productos[{idx}][id]']
+                    cantidad_str = request.POST[f'productos[{idx}][cantidad]']
+                    precio_unitario_str = request.POST.get(f'productos[{idx}][precio]', '0.00')
+
+                    try:
+                        producto_id = int(producto_id_str)
+                        cantidad_item = int(cantidad_str)
+                        precio_unitario_item = Decimal(precio_unitario_str)
+                        if cantidad_item <= 0: raise ValueError("La cantidad debe ser positiva.")
+                        if precio_unitario_item < 0: raise ValueError("El precio no puede ser negativo.")
+                    except ValueError as ve:
+                        messages.error(request, f"Datos inválidos para el producto #{idx+1} en la tabla: {ve}")
+                        return render(request, 'guias/editar_guia.html', {
+                            'form': form, 'guia': guia, 'items_actuales_json': items_para_js, 'error_productos': True
+                        })
+
+                    producto_obj_item = get_object_or_404(Producto, id=producto_id)
+                    
+                    if idx == 0: 
+                        primer_producto_obj_de_tabla_edit = producto_obj_item
+                        primera_cantidad_de_tabla_edit = cantidad_item
+
+                    items_nuevos_para_db.append(
+                        GuiaEnvioProducto(
+                            producto=producto_obj_item,
+                            cantidad=cantidad_item,
+                            precio_unitario_en_guia=precio_unitario_item
+                        )
+                    )
+                    idx += 1
+
+                if not hay_productos_en_tabla:
+                    messages.error(request, "Debe haber al menos un producto en la tabla de la guía.")
+                    return render(request, 'guias/editar_guia.html', {
+                        'form': form, 'guia': guia, 'items_actuales_json': items_para_js, 'error_productos': True
+                    })
+
+                if 'producto' in form.fields and primer_producto_obj_de_tabla_edit:
+                     guia_actualizada.producto = primer_producto_obj_de_tabla_edit
+                if 'cantidad' in form.fields:
+                     guia_actualizada.cantidad = primera_cantidad_de_tabla_edit
+
+                guia_actualizada.save() 
+
+                guia_actualizada.items_guia.all().delete() 
+                
+                for item_db_obj in items_nuevos_para_db:
+                    item_db_obj.guia_envio = guia_actualizada 
+                
+                if items_nuevos_para_db:
+                    GuiaEnvioProducto.objects.bulk_create(items_nuevos_para_db)
+
+                messages.success(request, f'Guía #{guia.id} actualizada correctamente.')
+                return redirect('ver_guia', id=guia.id)
+            
+            except Producto.DoesNotExist:
+                messages.error(request, 'Error: Uno de los productos seleccionados en la tabla ya no existe.')
+            except Exception as e:
+                messages.error(request, f'Error inesperado al actualizar la guía: {str(e)}')
+        else: 
+            error_list = []
+            for field, errors_list_form in form.errors.items():
+                field_label = form.fields[field].label if field in form.fields and hasattr(form.fields[field], 'label') and form.fields[field].label else field
+                for error_item in errors_list_form:
+                    error_list.append(f"Error en '{field_label}': {error_item}")
+            messages.error(request, f"Por favor corrige los errores en el formulario: {'; '.join(error_list)}")
+        
+        return render(request, 'guias/editar_guia.html', {
+            'form': form, 
+            'guia': guia, 
+            'items_actuales_json': items_para_js 
+        })
+
+    else: 
+        form = GuiaEnvioForm(instance=guia)
+
+    return render(request, 'guias/editar_guia.html', {
+        'form': form,
+        'guia': guia,
+        'items_actuales_json': items_para_js
+    })
+
+def ver_guia(request, id):
+    guia = get_object_or_404(
+        GuiaEnvio.objects.select_related('producto').prefetch_related('items_guia__producto'),
+        id=id
+    )
+    return render(request, 'guias/ver_guia.html', {
+        'guia': guia,
+        'estados': GuiaEnvio.ESTADO_CHOICES
+    })
+
+def eliminar_guia(request, id):
+    guia = get_object_or_404(GuiaEnvio, id=id)
+    if request.method == 'POST':
+        guia_id_display = guia.id 
+        guia.delete()
+        messages.success(request, f'Guía #{guia_id_display} eliminada correctamente.')
+        return redirect('listar_guias')
+    return render(request, 'guias/eliminar_guia.html', {'guia': guia})
+
+def listar_guias(request): # THIS IS THE ONLY listar_guias FUNCTION
+    guias_qs = GuiaEnvio.objects.select_related(
+        'producto'
+    ).prefetch_related(
+        'items_guia__producto'
+    ).all().order_by('-fecha_creacion')
+
+    estado_filter = request.GET.get('estado', '')
+    ciudad_filter = request.GET.get('ciudad', '')
+    search_query = request.GET.get('search', '').strip()
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str = request.GET.get('fecha_fin', '')
+    export_format = request.GET.get('export_format', '')
+
+    if estado_filter:
+        guias_qs = guias_qs.filter(estado=estado_filter)
+    if ciudad_filter:
+        guias_qs = guias_qs.filter(cliente_ciudad=ciudad_filter)
+
+    if fecha_inicio_str:
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            guias_qs = guias_qs.filter(fecha_creacion__date__gte=fecha_inicio_obj)
+        except ValueError:
+            messages.warning(request, "Formato de fecha de inicio inválido. Use YYYY-MM-DD.")
+    if fecha_fin_str:
+        try:
+            fecha_fin_obj = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+            guias_qs = guias_qs.filter(fecha_creacion__date__lte=fecha_fin_obj)
+        except ValueError:
+            messages.warning(request, "Formato de fecha de fin inválido. Use YYYY-MM-DD.")
+
+    if search_query:
+        id_query = Q()
+        try:
+            search_id = int(search_query)
+            id_query = Q(id=search_id)
+        except ValueError:
+            pass
+
+        guias_qs = guias_qs.filter(
+            id_query |
+            Q(cliente_nombre__icontains=search_query) |
+            Q(codigo_seguimiento__icontains=search_query) |
+            Q(producto__nombre__icontains=search_query) |
+            Q(items_guia__producto__nombre__icontains=search_query) |
+            Q(contenido_resumen__icontains=search_query)
+        ).distinct()
+
+    if export_format:
+        filename_timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+
+        if export_format == 'excel':
+            try:
+                response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.xlsx"'
+                
+                workbook = openpyxl.Workbook()
+                sheet = workbook.active
+                sheet.title = "Guías de Envío"
+
+                headers = [
+                    "ID", "Código Seguimiento", "Cliente", "Teléfono", "Ciudad", "Dirección", "Dirección 2",
+                    "Contenido Resumen", "Observaciones", "Estado", "Total Guía",
+                    "Fecha Creación", "Fecha Actualización"
+                ]
+                for col_num, header_title in enumerate(headers, 1):
+                    cell = sheet.cell(row=1, column=col_num, value=header_title)
+                    cell.font = Font(bold=True)
+                    sheet.column_dimensions[get_column_letter(col_num)].width = 25
+
+                for row_num, guia in enumerate(guias_qs, 2):
+                    sheet.cell(row=row_num, column=1, value=guia.id)
+                    sheet.cell(row=row_num, column=2, value=guia.codigo_seguimiento)
+                    sheet.cell(row=row_num, column=3, value=str(guia.cliente_nombre))
+                    sheet.cell(row=row_num, column=4, value=str(guia.cliente_telefono))
+                    sheet.cell(row=row_num, column=5, value=str(guia.cliente_ciudad))
+                    sheet.cell(row=row_num, column=6, value=str(guia.cliente_direccion)) 
+                    sheet.cell(row=row_num, column=7, value=str(guia.cliente_direccion2 or ""))
+                    sheet.cell(row=row_num, column=8, value=str(guia.contenido_resumen or ""))
+                    sheet.cell(row=row_num, column=9, value=str(guia.observaciones or ""))
+                    sheet.cell(row=row_num, column=10, value=guia.get_estado_display())
+                    
+                    total_val = guia.total_guia
+                    if isinstance(total_val, Decimal):
+                        sheet.cell(row=row_num, column=11, value=total_val).number_format = '#,##0.00'
+                    elif total_val is not None:
+                        try:
+                            sheet.cell(row=row_num, column=11, value=Decimal(total_val)).number_format = '#,##0.00'
+                        except:
+                            sheet.cell(row=row_num, column=11, value=str(total_val)) 
+                    else:
+                        sheet.cell(row=row_num, column=11, value="")
+
+                    sheet.cell(row=row_num, column=12, value=guia.fecha_creacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_creacion else "")
+                    sheet.cell(row=row_num, column=13, value=guia.fecha_actualizacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_actualizacion else "")
+                
+                print("DEBUG: Attempting to save Excel workbook to response...")
+                workbook.save(response)
+                print("DEBUG: Excel workbook saved to response.")
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! EXCEL EXPORT ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error al generar Excel: {e}")
+                return redirect('listar_guias')
+
+        elif export_format == 'pdf':
+            try:
+                template_path = 'envios/guias/export_pdf_template.html' # App-namespaced path
+                print(f"DEBUG: Attempting to load PDF template: {template_path}")
+                template = get_template(template_path)
+                
+                context = {
+                    'guias': guias_qs,
+                    'export_date': timezone.now()
+                }
+                print("DEBUG: Rendering PDF HTML content...")
+                html = template.render(context)
+
+                result_file = BytesIO()
+                print("DEBUG: Attempting to create PDF with pisa...")
+                pisa_status = pisa.CreatePDF(html.encode('UTF-8'), dest=result_file, encoding='UTF-8')
+
+                if pisa_status.err:
+                    error_description = "Unknown error"
+                    if hasattr(pisa, 'pisaErrorCodes') and pisa_status.err_code in pisa.pisaErrorCodes:
+                        error_description = pisa.pisaErrorCodes[pisa_status.err_code]
+                    print(f"!!!!!!!!!!!! PISA PDF Error (pisa_status.err TRUE): Code {pisa_status.err_code} - {error_description} !!!!!!!!!!!!")
+                    messages.error(request, f"Error al generar PDF (código {pisa_status.err_code}). {error_description}")
+                    return redirect('listar_guias')
+                
+                print("DEBUG: PDF creation successful (pisa_status.err is False).")
+                response = HttpResponse(result_file.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.pdf"'
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! PDF EXPORT GENERIC ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error inesperado al generar PDF: {e}")
+                return redirect('listar_guias')
+        
+        elif export_format == 'txt':
+            try:
+                response = HttpResponse(content_type='text/plain; charset=utf-8')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.txt"'
+                
+                writer = csv.writer(response, delimiter='\t')
+                headers_txt = [
+                    "ID", "Código Seguimiento", "Cliente", "Teléfono", "Ciudad", "Dirección",
+                    "Contenido Resumen", "Estado", "Total Guía", "Fecha Creación"
+                ]
+                writer.writerow(headers_txt)
+
+                for guia in guias_qs:
+                    writer.writerow([
+                        guia.id,
+                        guia.codigo_seguimiento,
+                        str(guia.cliente_nombre),
+                        str(guia.cliente_telefono),
+                        str(guia.cliente_ciudad),
+                        str(guia.cliente_direccion),
+                        str(guia.contenido_resumen or ""),
+                        guia.get_estado_display(),
+                        str(guia.total_guia or ""),
+                        guia.fecha_creacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_creacion else ""
+                    ])
+                print("DEBUG: TXT export generated.")
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! TXT EXPORT ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error al generar archivo TXT: {e}")
+                return redirect('listar_guias')
+
+    # For regular HTML rendering (if not exporting)
+    todas_las_ciudades_en_db = GuiaEnvio.objects.values_list('cliente_ciudad', flat=True).distinct().order_by('cliente_ciudad')
+    ciudades_dropdown_choices = [(ciudad, ciudad) for ciudad in todas_las_ciudades_en_db if ciudad]
+
+    context = {
+        'guias': guias_qs,
+        'estados': GuiaEnvio.ESTADO_CHOICES,
+        'ciudades': ciudades_dropdown_choices,
+        'estado_selected': estado_filter,
+        'ciudad_selected': ciudad_filter,
+        'search_query': search_query,
+        'fecha_inicio_selected': fecha_inicio_str,
+        'fecha_fin_selected': fecha_fin_str,
+    }
+    return render(request, 'guias/listar_guias.html', context)
+    guias_qs = GuiaEnvio.objects.select_related(
+        'producto'
+    ).prefetch_related(
+        'items_guia__producto'
+    ).all().order_by('-fecha_creacion')
+
+    estado_filter = request.GET.get('estado', '')
+    ciudad_filter = request.GET.get('ciudad', '')
+    search_query = request.GET.get('search', '').strip()
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str = request.GET.get('fecha_fin', '')
+    export_format = request.GET.get('export_format', '')
+
+    if estado_filter:
+        guias_qs = guias_qs.filter(estado=estado_filter)
+    if ciudad_filter:
+        guias_qs = guias_qs.filter(cliente_ciudad=ciudad_filter)
+
+    if fecha_inicio_str:
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            guias_qs = guias_qs.filter(fecha_creacion__date__gte=fecha_inicio_obj)
+        except ValueError:
+            messages.warning(request, "Formato de fecha de inicio inválido. Use YYYY-MM-DD.")
+    if fecha_fin_str:
+        try:
+            fecha_fin_obj = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+            guias_qs = guias_qs.filter(fecha_creacion__date__lte=fecha_fin_obj)
+        except ValueError:
+            messages.warning(request, "Formato de fecha de fin inválido. Use YYYY-MM-DD.")
+
+    if search_query:
+        id_query = Q()
+        try:
+            search_id = int(search_query)
+            id_query = Q(id=search_id)
+        except ValueError:
+            pass
+
+        guias_qs = guias_qs.filter(
+            id_query |
+            Q(cliente_nombre__icontains=search_query) |
+            Q(codigo_seguimiento__icontains=search_query) |
+            Q(producto__nombre__icontains=search_query) |
+            Q(items_guia__producto__nombre__icontains=search_query) |
+            Q(contenido_resumen__icontains=search_query)
+        ).distinct()
+
+    if export_format:
+        filename_timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+
+        if export_format == 'excel':
+            try:
+                response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.xlsx"'
+                
+                workbook = openpyxl.Workbook()
+                sheet = workbook.active
+                sheet.title = "Guías de Envío"
+
+                headers = [
+                    "ID", "Código Seguimiento", "Cliente", "Teléfono", "Ciudad", "Dirección", "Dirección 2",
+                    "Contenido Resumen", "Observaciones", "Estado", "Total Guía",
+                    "Fecha Creación", "Fecha Actualización"
+                ]
+                for col_num, header_title in enumerate(headers, 1):
+                    cell = sheet.cell(row=1, column=col_num, value=header_title)
+                    cell.font = Font(bold=True)
+                    sheet.column_dimensions[get_column_letter(col_num)].width = 25
+
+                for row_num, guia in enumerate(guias_qs, 2):
+                    sheet.cell(row=row_num, column=1, value=guia.id)
+                    sheet.cell(row=row_num, column=2, value=guia.codigo_seguimiento)
+                    sheet.cell(row=row_num, column=3, value=str(guia.cliente_nombre))
+                    sheet.cell(row=row_num, column=4, value=str(guia.cliente_telefono))
+                    sheet.cell(row=row_num, column=5, value=str(guia.cliente_ciudad))
+                    sheet.cell(row=row_num, column=6, value=str(guia.cliente_direccion)) 
+                    sheet.cell(row=row_num, column=7, value=str(guia.cliente_direccion2 or ""))
+                    sheet.cell(row=row_num, column=8, value=str(guia.contenido_resumen or ""))
+                    sheet.cell(row=row_num, column=9, value=str(guia.observaciones or ""))
+                    sheet.cell(row=row_num, column=10, value=guia.get_estado_display())
+                    
+                    total_val = guia.total_guia
+                    if isinstance(total_val, Decimal):
+                        sheet.cell(row=row_num, column=11, value=total_val).number_format = '#,##0.00'
+                    elif total_val is not None:
+                        try:
+                            sheet.cell(row=row_num, column=11, value=Decimal(total_val)).number_format = '#,##0.00'
+                        except:
+                            sheet.cell(row=row_num, column=11, value=str(total_val)) 
+                    else:
+                        sheet.cell(row=row_num, column=11, value="")
+
+                    sheet.cell(row=row_num, column=12, value=guia.fecha_creacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_creacion else "")
+                    sheet.cell(row=row_num, column=13, value=guia.fecha_actualizacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_actualizacion else "")
+                
+                print("DEBUG: Attempting to save Excel workbook to response...")
+                workbook.save(response)
+                print("DEBUG: Excel workbook saved to response.")
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! EXCEL EXPORT ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error al generar Excel: {e}")
+                return redirect('listar_guias')
+
+        elif export_format == 'pdf':
+            try:
+                template_path = 'envios/guias/export_pdf_template.html'
+                print(f"DEBUG: Attempting to load PDF template: {template_path}")
+                template = get_template(template_path)
+                
+                context = {
+                    'guias': guias_qs,
+                    'export_date': timezone.now()
+                }
+                print("DEBUG: Rendering PDF HTML content...")
+                html = template.render(context)
+
+                result_file = BytesIO()
+                print("DEBUG: Attempting to create PDF with pisa...")
+                pisa_status = pisa.CreatePDF(html.encode('UTF-8'), dest=result_file, encoding='UTF-8')
+
+                if pisa_status.err:
+                    print(f"!!!!!!!!!!!! PISA PDF Error (pisa_status.err TRUE): {pisa_status.err_code} - {pisa.pisaErrorCodes[pisa_status.err_code]} !!!!!!!!!!!!")
+                    messages.error(request, f"Error al generar PDF (código {pisa_status.err_code}).")
+                    return redirect('listar_guias')
+                
+                print("DEBUG: PDF creation successful (pisa_status.err is False).")
+                response = HttpResponse(result_file.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.pdf"'
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! PDF EXPORT GENERIC ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error inesperado al generar PDF: {e}")
+                return redirect('listar_guias')
+        
+        elif export_format == 'txt':
+            try:
+                response = HttpResponse(content_type='text/plain; charset=utf-8')
+                response['Content-Disposition'] = f'attachment; filename="guias_export_{filename_timestamp}.txt"'
+                
+                writer = csv.writer(response, delimiter='\t')
+                headers_txt = [
+                    "ID", "Código Seguimiento", "Cliente", "Teléfono", "Ciudad", "Dirección",
+                    "Contenido Resumen", "Estado", "Total Guía", "Fecha Creación"
+                ]
+                writer.writerow(headers_txt)
+
+                for guia in guias_qs:
+                    writer.writerow([
+                        guia.id,
+                        guia.codigo_seguimiento,
+                        str(guia.cliente_nombre),
+                        str(guia.cliente_telefono),
+                        str(guia.cliente_ciudad),
+                        str(guia.cliente_direccion),
+                        str(guia.contenido_resumen or ""),
+                        guia.get_estado_display(),
+                        str(guia.total_guia or ""),
+                        guia.fecha_creacion.strftime('%Y-%m-%d %H:%M') if guia.fecha_creacion else ""
+                    ])
+                print("DEBUG: TXT export generated.")
+                return response
+            except Exception as e:
+                print(f"!!!!!!!!!!!! TXT EXPORT ERROR: {e} !!!!!!!!!!!!")
+                traceback.print_exc()
+                messages.error(request, f"Error al generar archivo TXT: {e}")
+                return redirect('listar_guias')
+
+    todas_las_ciudades_en_db = GuiaEnvio.objects.values_list('cliente_ciudad', flat=True).distinct().order_by('cliente_ciudad')
+    ciudades_dropdown_choices = [(ciudad, ciudad) for ciudad in todas_las_ciudades_en_db if ciudad]
+
+    context = {
+        'guias': guias_qs,
+        'estados': GuiaEnvio.ESTADO_CHOICES,
+        'ciudades': ciudades_dropdown_choices,
+        'estado_selected': estado_filter,
+        'ciudad_selected': ciudad_filter,
+        'search_query': search_query,
+        'fecha_inicio_selected': fecha_inicio_str,
+        'fecha_fin_selected': fecha_fin_str,
+    }
+    return render(request, 'guias/listar_guias.html', context)
+
+    
+
+
+# --- Campaign Views ---
+def index(request):
+    context = {
+        'countries': [
+            {'code': 'COL', 'name': 'Colombia'},
+            {'code': 'ECU', 'name': 'Ecuador'},
+            {'code': 'VEN', 'name': 'Venezuela'}
+        ],
+        'platforms': [
+            {'name': 'Facebook', 'code': 'F'},
+            {'name': 'TikTok', 'code': 'T'}
+        ],
+        'campaign_types': [
+            {'name': 'CBO', 'desc': 'Campaign Budget Optimization'},
+            {'name': 'ABO', 'desc': 'Ad Set Budget'}
+        ],
+        'persons': [
+            {'initials': 'DP', 'name': 'David Pérez'},
+            {'initials': 'AC', 'name': 'Ana Contreras'},
+            {'initials': 'MR', 'name': 'Mario Rodríguez'}
+        ]
+    }
+    return render(request, 'campaigns/index.html', context)
+
+def saved_campaigns(request):
+    campaigns = Campaign.objects.all()
+    return render(request, 'campaigns/campanas_guardadas.html', {'campaigns': campaigns})
+
+@csrf_exempt
+def save_campaign(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            gui_string = data.get('gui_string')
+            if not gui_string: 
+                return JsonResponse({'success': False, 'error': 'gui_string es requerido'})
+
+            if Campaign.objects.filter(gui_string=gui_string).exists():
+                return JsonResponse({'success': False, 'error': 'Esta campaña ya existe'})
+            
+            campaign = Campaign(
+                gui_string=gui_string,
+                pais=data.get('pais'),
+                plataforma=data.get('plataforma'),
+                tipo_campana=data.get('tipo_campana'),
+                fecha=data.get('fecha'), 
+                nombre_reloj=data.get('nombre_reloj'),
+                id_reloj=data.get('id_reloj'),
+                persona=data.get('persona'),
+                num_importacion=data.get('num_importacion')
+            )
+            campaign.save()
+            return JsonResponse({'success': True, 'message': 'Campaña guardada exitosamente'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'JSON inválido'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+@csrf_exempt
+def clear_campaigns(request):
+    if request.method == 'POST':
+        try:
+            Campaign.objects.all().delete()
+            return JsonResponse({'success': True, 'message': 'Todas las campañas han sido eliminadas'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        {% extends 'base.html' %}
+
+{% block title %}Guías de Envío - HOKO{% endblock %}
+
+{% block content %}
+{# ... (your existing HTML content for the page, including the table and popover structure) ... #}
+{# The provided HTML from your prompt for the filter/search bar and popover goes here #}
+<div class="products-container"> {# Asumo que esta clase viene de tu base.html o CSS global #}
+    <h1>Guías de Envío</h1>
+
+    <!-- Barra de acciones -->
+    <div class="products-actions">
+        {# Main search form, will submit GET to listar_guias #}
+        <form method="get" action="{% url 'listar_guias' %}" id="search-form" class="search-form" style="display: flex; flex-grow: 1; align-items: center; gap: 5px;">
+            <input type="text" name="search" id="search-input"
+                   placeholder="Buscar por ID, código, cliente, contenido..."
+                   class="search-form-input"
+                   value="{{ search_query|default:'' }}"
+                   style="flex-grow: 1; min-width: 600px; height: 38px; padding: 0 10px; border: 1px solid #ddd; border-radius: 4px;">
+            
+            {# These hidden fields will carry the popover filter values when main search is submitted #}
+            <input type="hidden" name="estado" id="hidden_estado_for_main_search" value="{{ estado_selected|default:'' }}">
+            <input type="hidden" name="ciudad" id="hidden_ciudad_for_main_search" value="{{ ciudad_selected|default:'' }}">
+            <input type="hidden" name="fecha_inicio" id="hidden_fecha_inicio_for_main_search" value="{{ fecha_inicio_selected|default:'' }}">
+            <input type="hidden" name="fecha_fin" id="hidden_fecha_fin_for_main_search" value="{{ fecha_fin_selected|default:'' }}">
+
+            <button type="submit" class="btn search-form-btn" style="height: 38px; padding: 0 15px; white-space: nowrap;">
+                <i class="fas fa-search" style="margin-right: 5px;"></i> Buscar
+            </button>
+        </form>
+
+        <div class="action-buttons" style="display: flex; align-items: center; gap: 10px;">
+            <a href="{% url 'listar_guias' %}" class="btn btn-secondary" title="Limpiar filtros y búsqueda">
+                <i class="fas fa-sync-alt"></i> Limpiar
+            </a>
+            <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
+
+            <!-- Filtros Popover -->
+            <div class="popover-container">
+                <button type="button" class="popover-toggle btn" id="togglePopover" title="Abrir filtros avanzados">🛠️ Filtros</button>
+                <div class="popover hidden" id="filterPopover" style="position: absolute; background-color: white; border: 1px solid #ccc; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; min-width: 280px; border-radius: 5px; right: 0; top: calc(100% + 5px);">
+                    {# Popover filter form, will also submit GET to listar_guias #}
+                    <form method="get" action="{% url 'listar_guias' %}" id="filters-popover-form">
+                        {# This hidden field will carry the main search query when popover "Aplicar" is clicked #}
+                        <input type="hidden" name="search" id="hidden_search_for_popover_submit" value="{{ search_query|default:'' }}">
+
+                        <h4 style="margin-top:0; margin-bottom: 5px;">ESTADO</h4>
+                        <select name="estado" id="popover_estado_select" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="">Todos los estados</option>
+                            {% for value, label in estados %}
+                            <option value="{{ value }}" {% if estado_selected|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                        <h4 style="margin-bottom: 5px;">CIUDAD</h4>
+                        <select name="ciudad" id="popover_ciudad_select" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="">Todas las ciudades</option>
+                            {% for c_value, c_label in ciudades %}
+                            <option value="{{ c_value }}" {% if ciudad_selected|stringformat:"s" == c_value|stringformat:"s" %}selected{% endif %}>
+                                {{ c_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                        <h4 style="margin-bottom: 5px;">FECHA DE CREACIÓN</h4>
+                        <div class="date-filters" style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+                            <input type="date" name="fecha_inicio" id="popover_fecha_inicio_input" value="{{ fecha_inicio_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
+                            <span style="margin: 0 5px;">a</span>
+                            <input type="date" name="fecha_fin" id="popover_fecha_fin_input" value="{{ fecha_fin_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
+                        </div>
+                        
+                        <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
+                            <button type="button" class="btn exportar" id="export-txt-btn" style="width: 100%;">⬇ Exportar como TXT</button>
+                            <button type="button" class="btn exportarExcel" id="export-excel-btn" style="width: 100%;">⬇ Exportar como Excel</button>
+                            <button type="button" class="btn exportarPdf" id="export-pdf-btn" style="width: 100%;">⬇ Exportar como PDF</button>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Aplicar Filtros</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de guías -->
+    <div class="table-wrapper" style="overflow-x: auto; margin-top: 20px;">
+        <table class="products-table" id="guias-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;"><input type="checkbox" id="select-all" title="Seleccionar todo"></th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">ID</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Código</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Cliente</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Ciudad</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Contenido (Resumen)</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Estado</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Creación</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Modificación</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guia in guias %}
+                <tr data-id="{{ guia.id }}"
+                    data-codigo="{{ guia.codigo_seguimiento|lower }}"
+                    data-cliente="{{ guia.cliente_nombre|lower }}"
+                    data-productos="{{ guia.contenido_resumen|default:''|lower }}" 
+                    data-ciudad="{{ guia.cliente_ciudad|lower }}"
+                    data-estado="{{ guia.estado|lower }}">
+                    <td style="padding: 10px; border: 1px solid #ddd;"><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.id }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.codigo_seguimiento }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_nombre }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_ciudad }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        {{ guia.contenido_resumen|default:"(Sin resumen)"|truncatewords:7 }}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        <span class="badge 
+                            {% if guia.estado == 'entregado' %}badge-success
+                            {% elif guia.estado == 'cancelado' %}badge-danger
+                            {% elif guia.estado == 'pendiente' %}badge-secondary
+                            {% elif guia.estado == 'transito' %}badge-info 
+                            {% elif guia.estado == 'preparacion' %}badge-warning
+                            {% else %}badge-light{% endif %}"
+                            style="padding: 5px 10px; border-radius: 12px; font-size: 0.9em; color: white; 
+                                   background-color: {% if guia.estado == 'entregado' %}#28a745{% elif guia.estado == 'cancelado' %}#dc3545{% elif guia.estado == 'pendiente' %}#6c757d{% elif guia.estado == 'transito' %}#17a2b8{% elif guia.estado == 'preparacion' %}#ffc107{% else %}#f8f9fa; color: #333; border: 1px solid #ccc;{% endif %}">
+                            {{ guia.get_estado_display }}
+                        </span>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center; white-space: nowrap;">
+                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver" title="Ver Guía">👁️</a>
+                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar" title="Editar Guía">✏️</a>
+                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar" title="Eliminar Guía">🗑️</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center" style="padding: 20px; border: 1px solid #ddd; text-align: center;">
+                        No hay guías registradas que coincidan con los filtros aplicados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+  /* Ensure .hidden class is defined if not already globally available */
+  .hidden {
+      display: none !important;
+  }
+  /* ESTILOS DEL LISTADO (los que tenías en tu HTML de listado, adaptados) */
+  .products-container h1 { /* Estilo HOKO para H1 */
+      text-align: center;
+      font-size: 28px; /* O el tamaño de tu .main-content h1 */
+      font-weight: bold;
+      color: #070E27;
+      border-bottom: 2px solid #070E27;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+  }
+
+  .products-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 1rem; /* HOKO .products-actions style */
+      background-color: #f9f9f9;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  .search-form {
+      display: flex;
+      flex-grow: 1;
+      align-items: center;
+      gap: 5px;
+  }
+  .search-form-input {
+      flex-grow: 1;
+      min-width: 300px; /* Ajusta según necesidad */
+      height: 38px; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; /* HOKO .search-input */
+      font-size: 1rem; /* HOKO .search-input (18px / 1.125rem si base es 16px)*/
+  }
+  .search-form-btn, .action-buttons .btn { /* HOKO .btn */
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      height: 38px; /* Ajustado a 38px */
+      display: inline-flex; /* Para alinear icono y texto */
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+  }
+  .search-form-btn { background-color: #1E3A8A; /* HOKO .btn.buscar */ }
+  .search-form-btn i { margin-right: 5px;}
+
+  .action-buttons { display: flex; align-items: center; gap: 10px; }
+  .action-buttons .btn.crear { background-color: #28A745; /* HOKO .btn.crear */ }
+  .action-buttons .btn.btn-secondary { background-color: #6c757d; } /* Bootstrap standard */
+
+  .popover-container { position: relative; }
+  .popover-toggle.btn { background-color: #4a90e2; /* HOKO .popover-toggle */ }
+  /* .popover has inline styles, but if .hidden class is not enough, this could be used.
+  .popover {
+      background-color: white; border: 1px solid #ccc;
+      padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      z-index: 1050; min-width: 280px; border-radius: 8px; 
+  }
+  */
+  .popover h4 { margin-top:0; margin-bottom: 8px; font-size: 1rem; color: #333; }
+  .popover .filter-select, .popover .filter-date {
+      width: 100%; padding: 8px; margin-bottom: 10px;
+      border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem;
+  }
+  .popover .date-filters { display: flex; align-items: center; gap: 5px; margin-bottom: 15px; }
+  .popover .date-filters span { margin: 0 5px; }
+  .popover .btn-primary { background-color: #070E27; width: 100%; padding: 10px; } /* HOKO primary button */
+
+
+  .table-wrapper { overflow-x: auto; margin-top: 20px; }
+  .products-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; /* HOKO .products-table font-size (18px si base es 18px) */}
+  .products-table th, .products-table td {
+      padding: 10px 12px; /* HOKO .products-table th, td padding */
+      border: 1px solid #ddd; /* Un borde más estándar que el original */
+      text-align: left;
+      vertical-align: middle;
+  }
+  .products-table thead th {
+      background-color: #070E27; /* HOKO .products-table th background */
+      color: white;
+      font-weight: 600; /* HOKO .products-table th font-weight */
+  }
+  .products-table tbody tr:hover { background-color: #f5f5f5; /* Un hover sutil */ }
+  .products-table .text-center { text-align: center; }
+
+  .products-table .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; margin: 0 2px; }
+  .products-table .btn.ver { background-color: #c9c0a4; color: #000; } /* HOKO .btn.ver */
+  .products-table .btn.editar { background-color: #FFC107; color: #000; } /* HOKO .btn.editar */
+  .products-table .btn.eliminar { background-color: #DC3545; color: white; } /* HOKO .btn.eliminar */
+
+  /* Badges con colores consistentes de HOKO */
+  .badge { display: inline-block; padding: .4em .75em; font-size: .85em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 8px; }
+  .bg-success-hoko { background-color: #28a745; color: white; }
+  .bg-danger-hoko  { background-color: #dc3545; color: white; }
+  .bg-secondary-hoko{ background-color: #6c757d; color: white; }
+  .bg-info-hoko    { background-color: #1E3A8A; color: white; } /* Usando el azul de sidebar hover */
+  .bg-warning-hoko { background-color: #ffc107; color: #212529; }
+  .bg-light-hoko   { background-color: #e9ecef; color: #212529; border: 1px solid #ced4da; } {{ guia.get_estado_display }}
+
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("GUIAS_FILTRO_SCRIPT: DOMContentLoaded.");
+
+    // --- Lógica de Seleccionar Todos los Checkboxes (para la tabla de guías) ---
+    try {
+        const selectAll = document.getElementById('select-all'); 
+        const checkboxes = document.querySelectorAll('.select-row');
+
+        if (selectAll && checkboxes.length > 0) {
+            console.log("GUIAS_FILTRO_SCRIPT (CHECKBOX): 'select-all' y '.select-row' encontrados.");
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll.checked;
+                });
+            });
+        } else {
+            if(!selectAll) console.warn("GUIAS_FILTRO_SCRIPT (CHECKBOX) WARN: No se encontró #select-all.");
+            if(checkboxes.length === 0) console.warn("GUIAS_FILTRO_SCRIPT (CHECKBOX) WARN: No se encontraron checkboxes con clase .select-row.");
+        }
+    } catch (e) {
+        console.error("GUIAS_FILTRO_SCRIPT (CHECKBOX) ERROR:", e);
+    }
+
+    // --- Lógica del Popover de Filtros para Guías (CON IDs '_guiasFiltro') ---
+    const botonToggleFiltroGuias = document.getElementById('togglePopover_guiasFiltro');
+    const contenidoPopoverFiltroGuias = document.getElementById('filterPopover_guiasFiltro');
+
+    console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Botón Toggle encontrado:", botonToggleFiltroGuias);
+    console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Contenido Popover encontrado:", contenidoPopoverFiltroGuias);
+
+    if (botonToggleFiltroGuias && contenidoPopoverFiltroGuias) {
+        console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Elementos encontrados. Añadiendo listeners.");
+
+        botonToggleFiltroGuias.addEventListener('click', function(event) {
+            console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Clic en togglePopover_guiasFiltro.");
+            event.stopPropagation();
+            contenidoPopoverFiltroGuias.classList.toggle('hidden_guiasFiltro'); 
+            console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Popover 'hidden_guiasFiltro' class es ahora:", contenidoPopoverFiltroGuias.classList.contains('hidden_guiasFiltro'));
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!contenidoPopoverFiltroGuias.classList.contains('hidden_guiasFiltro') && 
+                !contenidoPopoverFiltroGuias.contains(event.target) &&      
+                event.target !== botonToggleFiltroGuias &&                  
+                !botonToggleFiltroGuias.contains(event.target)) {          
+                console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Clic fuera del popover. Ocultando.");
+                contenidoPopoverFiltroGuias.classList.add('hidden_guiasFiltro');
+            }
+        });
+
+        contenidoPopoverFiltroGuias.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+        console.log("GUIAS_FILTRO_SCRIPT (POPOVER): Listeners para toggle y clic externo añadidos.");
+
+        // Sincronización de Formularios y Lógica de Exportación
+        const formPrincipalBusqueda = document.getElementById('search-form');
+        const formFiltrosEnPopover = document.getElementById('filters-popover_guiasFiltro-form');
+
+        const inputOcultoEstadoPrincipal = document.getElementById('hidden_estado_for_main_search');
+        const inputOcultoCiudadPrincipal = document.getElementById('hidden_ciudad_for_main_search');
+        const inputOcultoFechaInicioPrincipal = document.getElementById('hidden_fecha_inicio_for_main_search');
+        const inputOcultoFechaFinPrincipal = document.getElementById('hidden_fecha_fin_for_main_search');
+        const inputBusquedaPrincipal = document.getElementById('search-input');
+
+        const inputSearchOcultoPopover = document.getElementById('hidden_search_for_popover_guiasFiltro_submit');
+        const selectEstadoPopover = document.getElementById('popover_estado_guiasFiltro_select');
+        const selectCiudadPopover = document.getElementById('popover_ciudad_guiasFiltro_select');
+        const inputFechaInicioPopover = document.getElementById('popover_fecha_inicio_guiasFiltro_input');
+        const inputFechaFinPopover = document.getElementById('popover_fecha_fin_guiasFiltro_input');
+
+        if (formPrincipalBusqueda && inputOcultoEstadoPrincipal && selectEstadoPopover && inputOcultoCiudadPrincipal && selectCiudadPopover && inputOcultoFechaInicioPrincipal && inputFechaInicioPopover && inputOcultoFechaFinPrincipal && inputFechaFinPopover) {
+            formPrincipalBusqueda.addEventListener('submit', function() {
+                console.log("GUIAS_FILTRO_SCRIPT (SYNC): Enviando form principal. Sincronizando desde popover.");
+                inputOcultoEstadoPrincipal.value = selectEstadoPopover.value;
+                inputOcultoCiudadPrincipal.value = selectCiudadPopover.value;
+                inputOcultoFechaInicioPrincipal.value = inputFechaInicioPopover.value;
+                inputOcultoFechaFinPrincipal.value = inputFechaFinPopover.value;
+            });
+        } else {
+            console.warn("GUIAS_FILTRO_SCRIPT (SYNC) WARN: Faltan uno o más elementos para la sincronización completa del FormPrincipal desde Popover. Revisa IDs.");
+        }
+
+        if (formFiltrosEnPopover && inputSearchOcultoPopover && inputBusquedaPrincipal) {
+            formFiltrosEnPopover.addEventListener('submit', function() {
+                console.log("GUIAS_FILTRO_SCRIPT (SYNC): Enviando form del popover. Sincronizando desde búsqueda principal.");
+                inputSearchOcultoPopover.value = inputBusquedaPrincipal.value;
+            });
+        } else {
+            console.warn("GUIAS_FILTRO_SCRIPT (SYNC) WARN: Faltan elementos para sincronizar Popover -> FormPrincipal.");
+        }
+
+        function handleExportGuiasFiltro(format) {
+            console.log(`GUIAS_FILTRO_SCRIPT (EXPORT): Exportando guías como ${format}`);
+            const baseUrl = "{% url 'listar_guias' %}";
+            const params = new URLSearchParams();
+
+            const searchQuery = inputBusquedaPrincipal ? inputBusquedaPrincipal.value : '';
+            const estado = selectEstadoPopover ? selectEstadoPopover.value : '';
+            const ciudad = selectCiudadPopover ? selectCiudadPopover.value : '';
+            const fechaInicio = inputFechaInicioPopover ? inputFechaInicioPopover.value : '';
+            const fechaFin = inputFechaFinPopover ? inputFechaFinPopover.value : '';
+
+            if (searchQuery) params.append('search', searchQuery);
+            if (estado) params.append('estado', estado);
+            if (ciudad) params.append('ciudad', ciudad);
+            if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+            if (fechaFin) params.append('fecha_fin', fechaFin);
+            params.append('export_format', format);
+
+            const exportUrl = `${baseUrl}?${params.toString()}`;
+            console.log(`GUIAS_FILTRO_SCRIPT (EXPORT): URL de exportación: ${exportUrl}`);
+            window.location.href = exportUrl;
+        }
+
+        const btnExportTxt = document.getElementById('export-txt-btn_guiasFiltro'); 
+        const btnExportExcel = document.getElementById('export-excel-btn_guiasFiltro');
+        const btnExportPdf = document.getElementById('export-pdf-btn_guiasFiltro');
+
+        if (btnExportTxt) btnExportTxt.addEventListener('click', () => handleExportGuiasFiltro('txt'));
+        else console.warn("GUIAS_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar TXT (ID: export-txt-btn_guiasFiltro) no encontrado.");
+        if (btnExportExcel) btnExportExcel.addEventListener('click', () => handleExportGuiasFiltro('excel'));
+        else console.warn("GUIAS_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar Excel (ID: export-excel-btn_guiasFiltro) no encontrado.");
+        if (btnExportPdf) btnExportPdf.addEventListener('click', () => handleExportGuiasFiltro('pdf'));
+        else console.warn("GUIAS_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar PDF (ID: export-pdf-btn_guiasFiltro) no encontrado.");
+
+    } else {
+        console.error("GUIAS_FILTRO_SCRIPT (POPOVER) ERROR CRÍTICO: No se encontró el botón de toggle o el contenido del popover. La funcionalidad del popover de filtros de guías no operará.");
+    }
+    
+    console.log("GUIAS_FILTRO_SCRIPT: Fin.");
+});
+</script>
+{% endblock %}      
+
+
+
+
+
+
+
+
+
+
+
+
+
               
               
               

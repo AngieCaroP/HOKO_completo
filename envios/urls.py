@@ -31,12 +31,16 @@ urlpatterns = [
     path('api/productos/', views.search_productos, name='search_productos_api'),
     path('api/productos/<int:pk>/', views.producto_detail_api, name='producto_detail_api'),
     
-     #campañas
-    path('campaigns/', views.index, name='index'),
-    # Add the comma here:                  V
+    # --- CAMPAÑAS ---
+    # Asegúrate que 'views.index' corresponda al nombre correcto en views.py 
+    # (si lo renombraste a 'index_campaigns', cámbialo aquí también)
+    path('campaigns/', views.index, name='index'), 
     path('campaigns/campanas_guardadas/', views.saved_campaigns, name='campanas_guardadas'),
-    path('api/save-campaign/', views.save_campaign, name='save_campaign'),
-    path('api/clear-campaigns/', views.clear_campaigns, name='clear_campaigns'),
+    
+    # --- CORRECCIÓN PARA EL AttributeError ---
+    path('api/save-campaign/', views.save_campaign_api, name='save_campaign_api'),
+    path('api/clear-campaigns/', views.clear_campaigns_api, name='clear_campaigns_api'),
+    # --- FIN DE LA CORRECCIÓN ---
 ]
 
 if settings.DEBUG:

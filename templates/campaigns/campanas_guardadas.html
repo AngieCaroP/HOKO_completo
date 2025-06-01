@@ -1,4 +1,3 @@
-<!-- campaigns/templates/campaigns/campanas_guardadas.html -->
 {% extends 'campaigns/base_guardadas.html' %}
 {% load static %}
 
@@ -7,70 +6,63 @@
 {% endblock %}
 
 {% block content %}
-<!-- tu contenido aquí -->
+ <div class="container">
+        <div class="controls">
+            <button id="btnRegresar" class="btn-secondary">Regresar</button>
+            <h1>Lista de Campañas Guardadas</h1>
+            <button id="limpiarCampañasBtn" class="btn-danger">Limpiar Todas</button>
+        </div>
 
-
-<div class="container">
-    <div class="controls">
-        <button id="btnRegresar" class="btn-secondary" href="{% url 'index' %}">Regresar</button>
-        <h1>Lista de Campañas Guardadas</h1>
-        <button id="limpiarCampañasBtn" class="btn-danger">Limpiar Todas</button>
-    </div>
-
-    <div class="filters">
-        <h2>Filtrar Campañas</h2>
-        <div class="filter-grid">
-            <div>
-                <label for="filtroPais">País:</label>
-                <input type="text" id="filtroPais" placeholder="Ej: ECU">
+        <div class="filters">
+            <h2>Filtrar Campañas</h2>
+            <div class="filter-grid">
+                <div>
+                    <label for="filtroPais">País:</label>
+                    <input type="text" id="filtroPais" placeholder="Ej: ECU">
+                </div>
+                <div>
+                    <label for="filtroPlataforma">Plataforma:</label>
+                    <select id="filtroPlataforma">
+                        <option value="">Todas</option>
+                        <option value="F">Facebook (F)</option>
+                        <option value="T">TikTok (T)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filtroTipoCampana">Tipo Campaña:</label>
+                    <input type="text" id="filtroTipoCampana" placeholder="Ej: CBO">
+                </div>
+                <div>
+                    <label for="filtroFecha">Fecha (del GUI):</label>
+                    <input type="date" id="filtroFecha">
+                </div>
+                <div>
+                    <label for="filtroNombreReloj">Nombre Reloj:</label>
+                    <input type="text" id="filtroNombreReloj" placeholder="Parte del nombre">
+                </div>
+                <div>
+                    <label for="filtroIdReloj">ID Reloj:</label>
+                    <input type="text" id="filtroIdReloj" placeholder="Ej: 12345">
+                </div>
+                <div>
+                    <label for="filtroPersona">Persona:</label>
+                    <input type="text" id="filtroPersona" placeholder="Ej: DP">
+                </div>
+                <div>
+                    <label for="filtroNumImportacion">No. Importación:</label>
+                    <input type="text" id="filtroNumImportacion" placeholder="Ej: DC">
+                </div>
             </div>
-            <div>
-                <label for="filtroPlataforma">Plataforma:</label>
-                <select id="filtroPlataforma">
-                    <option value="">Todas</option>
-                    <option value="F">Facebook (F)</option>
-                    <option value="T">TikTok (T)</option>
-                </select>
-            </div>
-            <div>
-                <label for="filtroTipoCampana">Tipo Campaña:</label>
-                <input type="text" id="filtroTipoCampana" placeholder="Ej: CBO">
-            </div>
-            <div>
-                <label for="filtroFecha">Fecha (del GUI):</label>
-                <input type="date" id="filtroFecha">
-            </div>
-            <div>
-                <label for="filtroNombreReloj">Nombre Reloj:</label>
-                <input type="text" id="filtroNombreReloj" placeholder="Parte del nombre">
-            </div>
-            <div>
-                <label for="filtroIdReloj">ID Reloj:</label>
-                <input type="text" id="filtroIdReloj" placeholder="Ej: 12345">
-            </div>
-            <div>
-                <label for="filtroPersona">Persona:</label>
-                <input type="text" id="filtroPersona" placeholder="Ej: DP">
-            </div>
-            <div>
-                <label for="filtroNumImportacion">No. Importación:</label>
-                <input type="text" id="filtroNumImportacion" placeholder="Ej: DC">
+            <div class="filter-buttons">
+                <button id="btnAplicarFiltros" class="btn-primary">Aplicar Filtros</button>
+                <button id="btnLimpiarFiltros" class="btn-warning">Limpiar Filtros</button>
             </div>
         </div>
-        <div class="filter-buttons">
-            <button id="btnAplicarFiltros" class="btn-primary">Aplicar Filtros</button>
-            <button id="btnLimpiarFiltros" class="btn-warning">Limpiar Filtros</button>
-        </div>
-    </div>
 
-    <ul id="listaCampañasGuardadas">
-        {% for campaign in campaigns %}
-        <li>{{ campaign.gui_string }}</li>
-        {% empty %}
-        <p class="no-campaigns">No hay campañas que coincidan con los filtros o no hay campañas guardadas.</p>
-        {% endfor %}
-    </ul>
-</div>
+        <ul id="listaCampañasGuardadas">
+            <!-- Las campañas se cargarán aquí por JavaScript -->
+        </ul>
+    </div>
 
 {% csrf_token %}
 {% endblock %}

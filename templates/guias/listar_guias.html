@@ -1,23 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}Guías de Envío - HOKO{% endblock %}
+{% block title %}Guías de Envío - HOKO - Filtro con IDs XYZ{% endblock %}
 
 {% block content %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
-<div class="products-container"> {# Asumo que esta clase viene de tu base.html o CSS global #}
+<div class="products-container">
     <h1>Guías de Envío</h1>
 
     <!-- Barra de acciones -->
     <div class="products-actions">
-        <form method="get" id="search-form" class="search-form" style="display: flex; flex-grow: 1; align-items: center; gap: 5px;">
+        <form method="get" action="{% url 'listar_guias' %}" id="search-form" class="search-form" style="display: flex; flex-grow: 1; align-items: center; gap: 5px;">
             <input type="text" name="search" id="search-input"
                    placeholder="Buscar por ID, código, cliente, contenido..."
                    class="search-form-input"
                    value="{{ search_query|default:'' }}"
                    style="flex-grow: 1; min-width: 600px; height: 38px; padding: 0 10px; border: 1px solid #ddd; border-radius: 4px;">
+            
+            <input type="hidden" name="estado" id="hidden_estado_for_main_search" value="{{ estado_selected|default:'' }}">
+            <input type="hidden" name="ciudad" id="hidden_ciudad_for_main_search" value="{{ ciudad_selected|default:'' }}">
+            <input type="hidden" name="fecha_inicio" id="hidden_fecha_inicio_for_main_search" value="{{ fecha_inicio_selected|default:'' }}">
+            <input type="hidden" name="fecha_fin" id="hidden_fecha_fin_for_main_search" value="{{ fecha_fin_selected|default:'' }}">
+
             <button type="submit" class="btn search-form-btn" style="height: 38px; padding: 0 15px; white-space: nowrap;">
                 <i class="fas fa-search" style="margin-right: 5px;"></i> Buscar
             </button>
@@ -29,14 +31,15 @@
             </a>
             <a href="{% url 'crear_guia' %}" class="btn crear">➕ Nueva Guía</a>
 
-         
-           <!-- Filtros -->
-            <div class="popover-container">
-                <button type="button" class="popover-toggle btn" id="togglePopover" title="Abrir filtros avanzados">🛠️ Filtros</button>
-                <div class="popover hidden" id="filterPopover" style="position: absolute; background-color: white; border: 1px solid #ccc; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; min-width: 250px; border-radius: 5px;">
-                    <form method="get" id="filters-form">
-                        <h4 style="margin-top:0; margin-bottom: 5px;">ESTADO</h4>
-                        <select name="estado" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
+            <!-- Filtros Popover con IDs y Clases TOTALMENTE NUEVOS Y ÚNICOS (xyzAppFiltroUnico_) -->
+            <div class="xyzAppFiltroUnico_Container">
+                <button type="button" class="xyzAppFiltroUnico_ToggleBoton btn" id="xyzAppFiltroUnico_ToggleBotonID" title="Abrir filtros avanzados (XYZ)">🛠️ Filtros</button>
+                <div class="xyzAppFiltroUnico_Contenido xyzAppFiltroUnico_Hidden" id="xyzAppFiltroUnico_ContenidoID" style="position: absolute; background-color: white; border: 1px solid #ccc; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; min-width: 280px; border-radius: 5px; right: 0; top: calc(100% + 5px);">
+                    <form method="get" action="{% url 'listar_guias' %}" id="xyzAppFiltroUnico_FormularioID">
+                        <input type="hidden" name="search" id="xyzAppFiltroUnico_InputOcultoBusquedaID" value="{{ search_query|default:'' }}">
+
+                        <h4 style="margin-top:0; margin-bottom: 5px;">ESTADO </h4>
+                        <select name="estado" id="xyzAppFiltroUnico_SelectEstadoID" class="xyzAppFiltroUnico_Select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd; box-sizing: border-box;">
                             <option value="">Todos los estados</option>
                             {% for value, label in estados %}
                             <option value="{{ value }}" {% if estado_selected|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
@@ -45,96 +48,57 @@
                             {% endfor %}
                         </select>
 
-                        <h4 style="margin-bottom: 5px;">CIUDAD</h4>
-                        <select name="ciudad" class="filter-select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                        <h4 style="margin-bottom: 5px;">CIUDAD </h4>
+                        <select name="ciudad" id="xyzAppFiltroUnico_SelectCiudadID" class="xyzAppFiltroUnico_Select" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd; box-sizing: border-box;">
                             <option value="">Todas las ciudades</option>
-                            {% for c_value, c_label in ciudades %} {# 'ciudades' viene de la vista como (valor, etiqueta) #}
+                            {% for c_value, c_label in ciudades %}
                             <option value="{{ c_value }}" {% if ciudad_selected|stringformat:"s" == c_value|stringformat:"s" %}selected{% endif %}>
                                 {{ c_label }}
                             </option>
                             {% endfor %}
                         </select>
 
-                        <h4 style="margin-bottom: 5px;">FECHA DE CREACIÓN</h4>
-                        <div class="date-filters" style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
-                            <input type="date" name="fecha_inicio" value="{{ fecha_inicio_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
+                        <h4 style="margin-bottom: 5px;">FECHA DE CREACIÓN </h4>
+                        <div class="xyzAppFiltroUnico_ContenedorFechas" style="display: flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+                            <input type="date" name="fecha_inicio" id="xyzAppFiltroUnico_InputFechaInicioID" value="{{ fecha_inicio_selected|default:'' }}" class="xyzAppFiltroUnico_InputFecha" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1; box-sizing: border-box;">
                             <span style="margin: 0 5px;">a</span>
-                            <input type="date" name="fecha_fin" value="{{ fecha_fin_selected|default:'' }}" class="filter-date" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;">
+                            <input type="date" name="fecha_fin" id="xyzAppFiltroUnico_InputFechaFinID" value="{{ fecha_fin_selected|default:'' }}" class="xyzAppFiltroUnico_InputFecha" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1; box-sizing: border-box;">
                         </div>
                         
                         <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
-                            <button type="button" class="btn exportar" style="width: 100%;">⬇ Exportar como TXT</button>
-                            <button type="button" class="btn exportarExcel" style="width: 100%;">⬇ Exportar como Excel</button>
-                            <button type="button" class="btn exportarPdf" style="width: 100%;">⬇ Exportar como PDF</button>
+                            <button type="button" class="xyzAppFiltroUnico_BotonExportar btn" id="xyzAppFiltroUnico_BotonExportarTxtID" style="width: 100%;">⬇ Exportar TXT </button>
+                            <button type="button" class="xyzAppFiltroUnico_BotonExportar btn" id="xyzAppFiltroUnico_BotonExportarExcelID" style="width: 100%;">⬇ Exportar Excel </button>
+                           {# <button type="button" class="xyzAppFiltroUnico_BotonExportar btn" id="xyzAppFiltroUnico_BotonExportarPdfID" style="width: 100%;">⬇ Exportar PDF </button>#}
                         </div>
                         
-                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Aplicar Filtros</button>
+                        <button type="submit" class="xyzAppFiltroUnico_BotonSubmit btn btn-primary" style="width: 100%; padding: 10px;">Aplicar Filtros </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Tabla de guías -->
     <div class="table-wrapper" style="overflow-x: auto; margin-top: 20px;">
         <table class="products-table" id="guias-table" style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="background-color: #f2f2f2;">
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;"><input type="checkbox" id="select-all" title="Seleccionar todo"></th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">ID</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Código</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Cliente</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Ciudad</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Contenido (Resumen)</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Estado</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Creación</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Modificación</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Acciones</th>
-                </tr>
-            </thead>
+            <thead><tr><th><input type="checkbox" id="select-all"></th><th>ID</th><th>Código</th><th>Cliente</th><th>Ciudad</th><th>Contenido</th><th>Estado</th><th>Creación</th><th>Modificación</th><th style="text-align:center">Acciones</th></tr></thead>
             <tbody>
                 {% for guia in guias %}
-                <tr data-id="{{ guia.id }}"
-                    data-codigo="{{ guia.codigo_seguimiento|lower }}"
-                    data-cliente="{{ guia.cliente_nombre|lower }}"
-                    data-productos="{{ guia.contenido_resumen|default:''|lower }}" {# Usando contenido_resumen #}
-                    data-ciudad="{{ guia.cliente_ciudad|lower }}"
-                    data-estado="{{ guia.estado|lower }}">
-                    <td style="padding: 10px; border: 1px solid #ddd;"><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.id }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.codigo_seguimiento }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_nombre }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.cliente_ciudad }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">
-                        {{ guia.contenido_resumen|default:"(Sin resumen)"|truncatewords:7 }}
-                    </td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">
+                <tr><td><input type="checkbox" class="select-row" data-id="{{ guia.id }}"></td><td>{{ guia.id }}</td><td>{{ guia.codigo_seguimiento }}</td><td>{{ guia.cliente_nombre }}</td><td>{{ guia.cliente_ciudad }}</td><td>{{ guia.contenido_resumen|default:"-"|truncatewords:7 }}</td>
+                                         <td style="padding: 10px; border: 1px solid #ddd;">
                         <span class="badge 
-                            {% if guia.estado == 'entregado' %}badge-success
-                            {% elif guia.estado == 'cancelado' %}badge-danger
-                            {% elif guia.estado == 'pendiente' %}badge-secondary
-                            {% elif guia.estado == 'transito' %}badge-info 
-                            {% elif guia.estado == 'preparacion' %}badge-warning
-                            {% else %}badge-light{% endif %}"
-                            style="padding: 5px 10px; border-radius: 12px; font-size: 0.9em; color: white; 
-                                   background-color: {% if guia.estado == 'entregado' %}#28a745{% elif guia.estado == 'cancelado' %}#dc3545{% elif guia.estado == 'pendiente' %}#6c757d{% elif guia.estado == 'transito' %}#17a2b8{% elif guia.estado == 'preparacion' %}#ffc107{% else %}#f8f9fa; color: #333; border: 1px solid #ccc;{% endif %}">
+                            {% if guia.estado == 'entregado' %}bg-success-hoko
+                            {% elif guia.estado == 'cancelado' %}bg-danger-hoko
+                            {% elif guia.estado == 'pendiente' %}bg-secondary-hoko
+                            {% elif guia.estado == 'transito' %}bg-info-hoko 
+                            {% elif guia.estado == 'preparacion' %}bg-warning-hoko
+                            {% else %}bg-light-hoko{% endif %}">
                             {{ guia.get_estado_display }}
                         </span>
                     </td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center; white-space: nowrap;">
-                        <a href="{% url 'ver_guia' guia.id %}" class="btn ver" title="Ver Guía">👁️</a>
-                        <a href="{% url 'editar_guia' guia.id %}" class="btn editar" title="Editar Guía">✏️</a>
-                        <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar" title="Eliminar Guía">🗑️</a>
-                    </td>
-                </tr>
+                    <td>{{ guia.fecha_creacion|date:"d/m/Y H:i" }}</td><td>{{ guia.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+                    <td style="text-align:center; white-space:nowrap;"><a href="{% url 'ver_guia' guia.id %}" class="btn ver">👁️</a> <a href="{% url 'editar_guia' guia.id %}" class="btn editar">✏️</a> <a href="{% url 'eliminar_guia' guia.id %}" class="btn eliminar">🗑️</a></td></tr>
                 {% empty %}
-                <tr>
-                    <td colspan="10" class="text-center" style="padding: 20px; border: 1px solid #ddd; text-align: center;">
-                        No hay guías registradas que coincidan con los filtros aplicados.
-                    </td>
-                </tr>
+                <tr><td colspan="10" class="text-center" style="padding:20px;">No hay guías que coincidan con los filtros.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -142,288 +106,343 @@
 </div>
 
 <style>
+  /* Clase EXTREMADAMENTE ÚNICA para ocultar este popover */
+  .xyzAppFiltroUnico_Hidden { 
+      display: none !important;
+  }
+  /* Contenedor EXTREMADAMENTE ÚNICO del popover */
+  .xyzAppFiltroUnico_Container { 
+      position: relative; 
+  }
   
-    /* ESTILOS DEL LISTADO (los que tenías en tu HTML de listado, adaptados) */
-    .products-container h1 { /* Estilo HOKO para H1 */
-        text-align: center;
-        font-size: 28px; /* O el tamaño de tu .main-content h1 */
-        font-weight: bold;
-        color: #070E27;
-        border-bottom: 2px solid #070E27;
-        margin-bottom: 30px;
-        padding-bottom: 10px;
-    }
+  /* Estilos específicos para el popover de filtros de guías con nombres EXTREMADAMENTE ÚNICOS */
+  #xyzAppFiltroUnico_ToggleBotonID { /* Estilo para el botón de toggle */
+      background-color: #008080 !important; /* Teal para distinguirlo */
+      color: white !important;
+      /* Otros estilos como padding, height, etc., son heredados de .btn general */
+  }
+  #xyzAppFiltroUnico_ToggleBotonID:hover {
+      background-color: #005959 !important;
+  }
 
-    .products-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 1rem; /* HOKO .products-actions style */
-        background-color: #f9f9f9;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .search-form {
-        display: flex;
-        flex-grow: 1;
-        align-items: center;
-        gap: 5px;
-    }
-    .search-form-input {
-        flex-grow: 1;
-        min-width: 300px; /* Ajusta según necesidad */
-        height: 38px; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; /* HOKO .search-input */
-        font-size: 1rem; /* HOKO .search-input (18px / 1.125rem si base es 16px)*/
-    }
-    .search-form-btn, .action-buttons .btn { /* HOKO .btn */
-        padding: 0.6rem 1.2rem;
-        border: none;
-        border-radius: 8px;
-        color: white;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        height: 38px; /* Ajustado a 38px */
-        display: inline-flex; /* Para alinear icono y texto */
-        align-items: center;
-        justify-content: center;
-        white-space: nowrap;
-    }
-    .search-form-btn { background-color: #1E3A8A; /* HOKO .btn.buscar */ }
-    .search-form-btn i { margin-right: 5px;}
+  #xyzAppFiltroUnico_ContenidoID h4 { margin-top:0; margin-bottom: 8px; font-size: 1rem; color: #333; }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_Select, 
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_InputFecha {
+      width: 100%; padding: 8px; margin-bottom: 10px;
+      border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem; box-sizing: border-box;
+  }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_ContenedorFechas { display: flex; align-items: center; gap: 5px; margin-bottom: 15px; }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_BotonSubmit { background-color: #070E27; width: 100%; padding: 10px; color:white; }
+  
+  .xyzAppFiltroUnico_BotonExportar { /* Clase para los botones de exportar */
+      background-color: #e9ecef !important; 
+      color: #212529 !important;
+      border: 1px solid #ced4da !important;
+  }
+  .xyzAppFiltroUnico_BotonExportar:hover {
+      background-color: #d3d9df !important;
+  }
 
-    .action-buttons { display: flex; align-items: center; gap: 10px; }
-    .action-buttons .btn.crear { background-color: #28A745; /* HOKO .btn.crear */ }
-    .action-buttons .btn.btn-secondary { background-color: #6c757d; } /* Bootstrap standard */
+  /* Estilos generales de la página (adaptados de tu ejemplo) */
+  .products-container h1 { text-align: center; font-size: 28px; font-weight: bold; color: #070E27; border-bottom: 2px solid #070E27; margin-bottom: 30px; padding-bottom: 10px; }
+  .products-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; padding: 1rem; background-color: #f9f9f9; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+  .search-form-input { flex-grow: 1; min-width: 300px; height: 38px; padding: 0 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+  .search-form-btn, .action-buttons .btn, .xyzAppFiltroUnico_ToggleBoton { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; color: white; font-size: 0.95rem; cursor: pointer; transition: background-color 0.3s ease; height: 38px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+  .search-form-btn { background-color: #1E3A8A; }
+  .action-buttons .btn.crear { background-color: #28A745; }
+  .action-buttons .btn.btn-secondary { background-color: #6c757d; }
+  .table-wrapper { overflow-x: auto; margin-top: 20px; }
+  .products-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .products-table th, .products-table td { padding: 10px 12px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
+  .products-table thead th { background-color: #070E27; color: white; font-weight: 600; }
+  
 
-    .popover-container { position: relative; }
-    .popover-toggle.btn { background-color: #4a90e2; /* HOKO .popover-toggle */ }
-    .popover {
-        position: absolute; right: 0; top: calc(100% + 5px);
-        background-color: white; border: 1px solid #ccc;
-        padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-        z-index: 1050; min-width: 280px; border-radius: 8px; /* HOKO .popover */
-    }
-    .popover.hidden { display: none; }
-    .popover h4 { margin-top:0; margin-bottom: 8px; font-size: 1rem; color: #333; }
-    .popover .filter-select, .popover .filter-date {
-        width: 100%; padding: 8px; margin-bottom: 10px;
-        border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem;
-    }
-    .popover .date-filters { display: flex; align-items: center; gap: 5px; margin-bottom: 15px; }
-    .popover .date-filters span { margin: 0 5px; }
-    .popover .export-buttons-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;}
-    .popover .export-buttons-group .btn { width: 100%; background-color: #f0f0f0; border-color: #ddd; color: #333; }
-    .popover .btn-primary { background-color: #070E27; width: 100%; padding: 10px; } /* HOKO primary button */
+  /* Badges con colores consistentes de HOKO */
+  .badge { display: inline-block; padding: .4em .75em; font-size: .85em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 8px; }
+  .bg-success-hoko { background-color: #28a745; color: white; }
+  .bg-danger-hoko  { background-color: #dc3545; color: white; }
+  .bg-secondary-hoko{ background-color: #6c757d; color: white; }
+  .bg-info-hoko    { background-color: #1E3A8A; color: white; } /* Usando el azul de sidebar hover */
+  .bg-warning-hoko { background-color: #ffc107; color: #212529; }
+  .bg-light-hoko   { background-color: #e9ecef; color: #212529; border: 1px solid #ced4da; }
 
 
-    .table-wrapper { overflow-x: auto; margin-top: 20px; }
-    .products-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; /* HOKO .products-table font-size (18px si base es 18px) */}
-    .products-table th, .products-table td {
-        padding: 10px 12px; /* HOKO .products-table th, td padding */
-        border: 1px solid #ddd; /* Un borde más estándar que el original */
-        text-align: left;
-        vertical-align: middle;
-    }
-    .products-table thead th {
-        background-color: #070E27; /* HOKO .products-table th background */
-        color: white;
-        font-weight: 600; /* HOKO .products-table th font-weight */
-    }
-    .products-table tbody tr:hover { background-color: #f5f5f5; /* Un hover sutil */ }
-    .products-table .text-center { text-align: center; }
+  .xyzAppFiltroUnico_Hidden { display: none !important; }
+  .xyzAppFiltroUnico_Container { position: relative; }
+  
+  /* --- Estilos para la BARRA DE ACCIONES GENERAL --- */
+  .products-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    /* --- CAMBIO PRINCIPAL AQUÍ para Guías --- */
+    padding: 20px 15px; /* Padding aumentado para hacer la barra más "grande" */
+    /* --- FIN DEL CAMBIO PRINCIPAL --- */
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.075);
+    flex-wrap: wrap;
+    gap: 15px; 
+  }
 
-    .products-table .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; margin: 0 2px; }
-    .products-table .btn.ver { background-color: #c9c0a4; color: #000; } /* HOKO .btn.ver */
-    .products-table .btn.editar { background-color: #FFC107; color: #000; } /* HOKO .btn.editar */
-    .products-table .btn.eliminar { background-color: #DC3545; color: white; } /* HOKO .btn.eliminar */
+  /* Estilos para el FORMULARIO DE BÚSQUEDA PRINCIPAL */
+  .search-form {
+      display: flex;
+      flex-grow: 1; /* Ocupa espacio disponible */
+      align-items: center;
+      gap: 0; /* Sin gap para unir input y botón */
+      min-width: 400px; /* Ancho mínimo para el conjunto de búsqueda */
+  }
+  .search-form-input {
+      flex-grow: 1; /* El input se expande */
+      height: 40px; 
+      padding: 0 12px; 
+      border: 1px solid #ced4da; 
+      border-right: none; /* Para unirse al botón */
+      border-radius: 6px 0 0 6px; /* Redondeo izquierdo */
+      font-size: 0.95rem;
+      box-sizing: border-box;
+  }
+  .search-form-input:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+  }
+  .search-form-btn {
+      height: 40px;
+      padding: 0 18px;
+      white-space: nowrap;
+      border: 1px solid #007bff; /* Borde para el botón */
+      background-color: #007bff;
+      color: white;
+      border-radius: 0 6px 6px 0; /* Redondeo derecho */
+      margin-left: -1px; /* Solapa ligeramente para una unión perfecta */
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .search-form-btn:hover {
+      background-color: #0056b3;
+      border-color: #0056b3;
+  }
+  .search-form-btn i {
+      margin-right: 6px;
+  }
 
-    /* Badges con colores consistentes de HOKO */
-    .badge { display: inline-block; padding: .4em .75em; font-size: .85em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 8px; }
-    .bg-success-hoko { background-color: #28a745; color: white; }
-    .bg-danger-hoko  { background-color: #dc3545; color: white; }
-    .bg-secondary-hoko{ background-color: #6c757d; color: white; }
-    .bg-info-hoko    { background-color: #1E3A8A; color: white; } /* Usando el azul de sidebar hover */
-    .bg-warning-hoko { background-color: #ffc107; color: #212529; }
-    .bg-light-hoko   { background-color: #e9ecef; color: #212529; border: 1px solid #ced4da; }
+  /* Estilos para el GRUPO DE BOTONES DE ACCIÓN (Limpiar, Nueva Guía, Filtros) */
+  .action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0; /* Para que no se encojan demasiado */
+  }
+  .action-buttons .btn { /* Estilo común para estos botones */
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      white-space: nowrap;
+      box-sizing: border-box;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .action-buttons .btn i {
+      margin-right: 6px;
+  }
+  .action-buttons .btn.btn-secondary { background-color: #6c757d; color: white; border-color: #6c757d; }
+  .action-buttons .btn.btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
+  .action-buttons .btn.crear { background-color: #28a745; color: white; border-color: #28a745; }
+  .action-buttons .btn.crear:hover { background-color: #218838; border-color: #1e7e34; }
+  
+  /* Estilos para el POPOVER DE FILTROS (IDs xyzAppFiltroUnico_) */
+  #xyzAppFiltroUnico_ToggleBotonID { 
+      background-color: #008080; color: white; border-color: #008080;
+      /* La altura y otros estilos base ya los toma de .action-buttons .btn */
+  }
+  #xyzAppFiltroUnico_ToggleBotonID:hover { background-color: #005959; border-color: #005959; }
+
+  #xyzAppFiltroUnico_ContenidoID h4 { /* ... (como lo tenías) ... */ }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_Select, 
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_InputFecha { /* ... (como lo tenías) ... */ }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_ContenedorFechas { /* ... (como lo tenías) ... */ }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_BotonSubmit { 
+      background-color: #0069d9; width: 100%; padding: 10px; color:white;
+      border: none; border-radius: 6px; font-weight: bold; font-size: 0.95em;
+  }
+  #xyzAppFiltroUnico_ContenidoID .xyzAppFiltroUnico_BotonSubmit:hover { background-color: #0056b3; }
+  
+  .xyzAppFiltroUnico_BotonExportar { 
+      background-color: #e9ecef; color: #212529; border: 1px solid #ced4da;
+      padding: 9px 12px; font-size: 0.9em; text-align: left; justify-content: flex-start;
+      border-radius: 6px;
+  }
+  .xyzAppFiltroUnico_BotonExportar:hover { background-color: #d3d9df; }
+  .xyzAppFiltroUnico_BotonExportar i { margin-right: 8px; }
+
+
+  /* Estilos generales de la página (adaptados de tu ejemplo) */
+  .products-container h1 { /* ... (como lo tenías) ... */ }
+  .table-wrapper { /* ... (como lo tenías) ... */ }
+  .products-table { /* ... (como lo tenías) ... */ }
+  .products-table th, .products-table td { /* ... (como lo tenías) ... */ }
+  .products-table thead th { /* ... (como lo tenías) ... */ }
+  
+  /* Badges HOKO */
+  .badge { /* ... (como lo tenías) ... */ }
+  .bg-success-hoko { /* ... */ } /* etc. */
 
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Popover de filtros
-    const togglePopoverBtn = document.getElementById('togglePopover');
-    const filterPopoverDiv = document.getElementById('filterPopover');
+//<![CDATA[
+(function() { // Envoltura para aislar el scope
+    function iniciarScriptFiltroXYZ() {
+        console.log("XYZ_FILTRO_SCRIPT: DOMContentLoaded, iniciando script para popover XYZ.");
 
-    if (togglePopoverBtn && filterPopoverDiv) {
-        togglePopoverBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Evitar que el clic se propague al documento
-            filterPopoverDiv.classList.toggle('hidden');
-        });
-
-        // Cerrar popover si se hace clic fuera de él
-        document.addEventListener('click', function(e) {
-            if (!filterPopoverDiv.contains(e.target) && !togglePopoverBtn.contains(e.target)) {
-                filterPopoverDiv.classList.add('hidden');
+        // --- Lógica de Seleccionar Todos los Checkboxes (Tabla Principal) ---
+        try {
+            const selectAllCheckbox = document.getElementById('select-all');
+            const rowCheckboxes = document.querySelectorAll('.select-row');
+            if (selectAllCheckbox && rowCheckboxes.length > 0) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    rowCheckboxes.forEach(checkbox => { checkbox.checked = selectAllCheckbox.checked; });
+                });
             }
-        });
-        // Evitar que el clic dentro del popover lo cierre
-        filterPopoverDiv.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    }
+        } catch(e) { console.error("XYZ_FILTRO_SCRIPT (CHECKBOX_TABLE) ERROR:", e); }
 
-    // Combinar filtros de búsqueda principal con filtros del popover
-    const mainSearchForm = document.getElementById('search-form');
-    const filtersPopoverForm = document.getElementById('filters-form');
+        // --- Lógica del Popover de Filtros para Guías (IDs xyzAppFiltroUnico_) ---
+        const botonToggleXYZ = document.getElementById('xyzAppFiltroUnico_ToggleBotonID');
+        const contenidoPopoverXYZ = document.getElementById('xyzAppFiltroUnico_ContenidoID');
+        const formularioPopoverXYZ = document.getElementById('xyzAppFiltroUnico_FormularioID');
 
-    if (mainSearchForm && filtersPopoverForm) {
-        mainSearchForm.addEventListener('submit', function(e) {
-            // Añadir filtros del popover al formulario de búsqueda principal
-            const popoverInputs = filtersPopoverForm.querySelectorAll('select, input[type="date"]');
-            popoverInputs.forEach(input => {
-                if (input.name && input.value) {
-                    let hiddenInput = mainSearchForm.querySelector(`input[type="hidden"][name="${input.name}"]`);
-                    if (!hiddenInput) {
-                        hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = input.name;
-                        mainSearchForm.appendChild(hiddenInput);
-                    }
-                    hiddenInput.value = input.value;
+        console.log("XYZ_FILTRO_SCRIPT: Botón Toggle (#xyzAppFiltroUnico_ToggleBotonID) encontrado:", botonToggleXYZ);
+        console.log("XYZ_FILTRO_SCRIPT: Contenido Popover (#xyzAppFiltroUnico_ContenidoID) encontrado:", contenidoPopoverXYZ);
+        console.log("XYZ_FILTRO_SCRIPT: Formulario Popover (#xyzAppFiltroUnico_FormularioID) encontrado:", formularioPopoverXYZ);
+
+        if (botonToggleXYZ && contenidoPopoverXYZ) {
+            botonToggleXYZ.onclick = function(event) { // Usamos .onclick para simplicidad si addEventListener fallaba antes
+                console.log("XYZ_FILTRO_SCRIPT: CLIC (vía .onclick) en #xyzAppFiltroUnico_ToggleBotonID.");
+                if (event) { event.stopPropagation(); }
+                contenidoPopoverXYZ.classList.toggle('xyzAppFiltroUnico_Hidden');
+                console.log("XYZ_FILTRO_SCRIPT: Clase 'xyzAppFiltroUnico_Hidden' es:", contenidoPopoverXYZ.classList.contains('xyzAppFiltroUnico_Hidden'));
+            };
+            document.addEventListener('click', function(docEvent) {
+                if (contenidoPopoverXYZ && !contenidoPopoverXYZ.classList.contains('xyzAppFiltroUnico_Hidden') && 
+                    !contenidoPopoverXYZ.contains(docEvent.target) && docEvent.target !== botonToggleXYZ && !botonToggleXYZ.contains(docEvent.target)) {
+                    contenidoPopoverXYZ.classList.add('xyzAppFiltroUnico_Hidden');
                 }
             });
-        });
-
-        filtersPopoverForm.addEventListener('submit', function(e) {
-            // Añadir el valor de la búsqueda principal al formulario de filtros del popover
-            const mainSearchInput = document.getElementById('search-input');
-            if (mainSearchInput && mainSearchInput.value.trim()) {
-                let hiddenSearch = filtersPopoverForm.querySelector('input[type="hidden"][name="search"]');
-                if (!hiddenSearch) {
-                    hiddenSearch = document.createElement('input');
-                    hiddenSearch.type = 'hidden';
-                    hiddenSearch.name = 'search';
-                    filtersPopoverForm.appendChild(hiddenSearch);
-                }
-                hiddenSearch.value = mainSearchInput.value.trim();
+            if(contenidoPopoverXYZ){
+                contenidoPopoverXYZ.addEventListener('click', function(popoverEvent) { popoverEvent.stopPropagation(); });
             }
-        });
-    }
+            console.log("XYZ_FILTRO_SCRIPT: Listeners básicos del popover XYZ añadidos.");
+        } else {
+            if (!botonToggleXYZ) console.error("XYZ_FILTRO_SCRIPT ERROR: No se encontró #xyzAppFiltroUnico_ToggleBotonID.");
+            if (!contenidoPopoverXYZ) console.error("XYZ_FILTRO_SCRIPT ERROR: No se encontró #xyzAppFiltroUnico_ContenidoID.");
+        }
 
-    // Función para obtener datos de la tabla para exportación
-    function getTableDataForExport() {
-        const tableBody = document.querySelector('#guias-table tbody');
-        if (!tableBody) return [];
+        // Sincronización de Formularios y Lógica de Exportación
+        if (formularioPopoverXYZ) {
+            const formPrincipalBusqueda = document.getElementById('search-form');
+            const inputOcultoEstadoPrincipal = document.getElementById('hidden_estado_for_main_search');
+            const inputOcultoCiudadPrincipal = document.getElementById('hidden_ciudad_for_main_search');
+            const inputOcultoFechaInicioPrincipal = document.getElementById('hidden_fecha_inicio_for_main_search');
+            const inputOcultoFechaFinPrincipal = document.getElementById('hidden_fecha_fin_for_main_search');
+            const inputBusquedaPrincipal = document.getElementById('search-input');
 
-        const rows = tableBody.querySelectorAll('tr');
-        const data = [];
+            const inputSearchOcultoPopover = document.getElementById('xyzAppFiltroUnico_InputOcultoBusquedaID');
+            const selectEstadoPopover = document.getElementById('xyzAppFiltroUnico_SelectEstadoID');
+            const selectCiudadPopover = document.getElementById('xyzAppFiltroUnico_SelectCiudadID');
+            const inputFechaInicioPopover = document.getElementById('xyzAppFiltroUnico_InputFechaInicioID');
+            const inputFechaFinPopover = document.getElementById('xyzAppFiltroUnico_InputFechaFinID');
 
-        rows.forEach(row => {
-            const isDataRow = !row.querySelector('td[colspan="10"]'); // Excluir fila de "No hay guías"
-            if (isDataRow) { // Solo filas de datos
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 8) {
-                    let estadoText = cells[6].textContent.trim();
-                    const badge = cells[6].querySelector('.badge');
-                    if (badge) {
-                        estadoText = badge.textContent.trim();
-                    }
-                    data.push({
-                        ID: cells[1].textContent.trim(),
-                        Código: cells[2].textContent.trim(),
-                        Cliente: cells[3].textContent.trim(),
-                        Ciudad: cells[4].textContent.trim(),
-                        Contenido: cells[5].textContent.trim(),
-                        Estado: estadoText,
-                        Creación: cells[7].textContent.trim(),
-                        // Modificación: cells[8].textContent.trim(), // Si la quieres exportar
-                    });
-                }
+            if (formPrincipalBusqueda && inputOcultoEstadoPrincipal && selectEstadoPopover && inputOcultoCiudadPrincipal && selectCiudadPopover && inputOcultoFechaInicioPrincipal && inputFechaInicioPopover && inputOcultoFechaFinPrincipal && inputFechaFinPopover && inputSearchOcultoPopover && inputBusquedaPrincipal) {
+                console.log("XYZ_FILTRO_SCRIPT (SYNC): Todos los elementos para sincronización encontrados.");
+                formPrincipalBusqueda.addEventListener('submit', function() {
+                    console.log("XYZ_FILTRO_SCRIPT (SYNC): Submit Formulario Principal. Sincronizando desde popover XYZ.");
+                    inputOcultoEstadoPrincipal.value = selectEstadoPopover.value;
+                    inputOcultoCiudadPrincipal.value = selectCiudadPopover.value;
+                    inputOcultoFechaInicioPrincipal.value = inputFechaInicioPopover.value;
+                    inputOcultoFechaFinPrincipal.value = inputFechaFinPopover.value;
+                    console.log("SYNC: hidden_estado=", inputOcultoEstadoPrincipal.value, "hidden_ciudad=", inputOcultoCiudadPrincipal.value);
+                });
+                formularioPopoverXYZ.addEventListener('submit', function(e) {
+                    console.log("XYZ_FILTRO_SCRIPT (SYNC): Submit Formulario Popover XYZ. Sincronizando desde búsqueda principal.");
+                    inputSearchOcultoPopover.value = inputBusquedaPrincipal.value;
+                    // El formulario tiene method="get" y action, así que se enviará normalmente.
+                    // e.preventDefault() no es necesario si queremos que el form se envíe.
+                    // Si la página no se recarga, entonces algo está haciendo preventDefault.
+                    console.log("SYNC: popover_search=", inputSearchOcultoPopover.value);
+                });
+                console.log("XYZ_FILTRO_SCRIPT (SYNC): Listeners de submit para sincronización añadidos.");
+            } else {
+                console.warn("XYZ_FILTRO_SCRIPT (SYNC) WARN: Faltan elementos para sincronización. Revisa IDs. formPrincipalBusqueda:", formPrincipalBusqueda, "selectEstadoPopover:", selectEstadoPopover, "etc.");
             }
-        });
-        return data;
-    }
 
-    // Event Listeners para botones de exportación
-    function setupExportButton(selector, exportFunction) {
-        const btn = document.querySelector(selector);
-        if (btn) {
-            btn.addEventListener('click', function() {
-                const dataToExport = getTableDataForExport();
-                if (dataToExport.length === 0) {
-                    alert("No hay datos filtrados para exportar.");
-                    return;
-                }
-                exportFunction(dataToExport);
-            });
+            function handleExportXYZ(format) {
+                console.log(`XYZ_FILTRO_SCRIPT (EXPORT): Solicitando exportación como ${format}`);
+                const baseUrl = "{% url 'listar_guias' %}";
+                const params = new URLSearchParams();
+
+                const searchQuery = inputBusquedaPrincipal ? inputBusquedaPrincipal.value : '';
+                const estado = selectEstadoPopover ? selectEstadoPopover.value : '';
+                const ciudad = selectCiudadPopover ? selectCiudadPopover.value : '';
+                const fechaInicio = inputFechaInicioPopover ? inputFechaInicioPopover.value : '';
+                const fechaFin = inputFechaFinPopover ? inputFechaFinPopover.value : '';
+
+                console.log(`EXPORT PARAMS: search=${searchQuery}, estado=${estado}, ciudad=${ciudad}, fecha_inicio=${fechaInicio}, fecha_fin=${fechaFin}`);
+
+                if (searchQuery) params.append('search', searchQuery);
+                if (estado) params.append('estado', estado);
+                if (ciudad) params.append('ciudad', ciudad);
+                if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+                if (fechaFin) params.append('fecha_fin', fechaFin);
+                params.append('export_format', format); // Parámetro clave para el backend
+
+                const exportUrl = `${baseUrl}?${params.toString()}`;
+                console.log(`XYZ_FILTRO_SCRIPT (EXPORT): URL de exportación construida: ${exportUrl}`);
+                window.location.href = exportUrl; // Redirigir para que el backend maneje la descarga
+            }
+
+            const btnExportTxtXYZ = document.getElementById('xyzAppFiltroUnico_BotonExportarTxtID'); 
+            const btnExportExcelXYZ = document.getElementById('xyzAppFiltroUnico_BotonExportarExcelID');
+            const btnExportPdfXYZ = document.getElementById('xyzAppFiltroUnico_BotonExportarPdfID');
+
+            if (btnExportTxtXYZ) btnExportTxtXYZ.addEventListener('click', () => handleExportXYZ('txt'));
+            else console.warn("XYZ_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar TXT XYZ no encontrado.");
+            if (btnExportExcelXYZ) btnExportExcelXYZ.addEventListener('click', () => handleExportXYZ('excel'));
+            else console.warn("XYZ_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar Excel XYZ no encontrado.");
+            if (btnExportPdfXYZ) btnExportPdfXYZ.addEventListener('click', () => handleExportXYZ('pdf'));
+            else console.warn("XYZ_FILTRO_SCRIPT (EXPORT) WARN: Botón Exportar PDF XYZ no encontrado.");
+            console.log("XYZ_FILTRO_SCRIPT (EXPORT): Listeners de botones de exportación añadidos.");
+
+        } else {
+             if (!formularioPopoverXYZ) console.error("XYZ_FILTRO_SCRIPT ERROR: No se encontró #xyzAppFiltroUnico_FormularioID. Sincronización y exportación no funcionarán.");
         }
-    }
-
-    setupExportButton('.exportar', function(data) { // TXT
-        let txtContent = 'ID\tCódigo\tCliente\tCiudad\tContenido\tEstado\tCreación\n';
-        data.forEach(item => {
-            txtContent += `${item.ID}\t${item.Código}\t${item.Cliente}\t${item.Ciudad}\t${item.Contenido}\t${item.Estado}\t${item.Creación}\n`;
-        });
-        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `guias_exportacion_${new Date().toISOString().slice(0,10)}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    });
-
-    setupExportButton('.exportarExcel', function(data) { // Excel
-        const ws = XLSX.utils.json_to_sheet(data, {header: ["ID", "Código", "Cliente", "Ciudad", "Contenido", "Estado", "Creación"]});
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Guías");
-        XLSX.writeFile(wb, `guias_exportacion_${new Date().toISOString().slice(0,10)}.xlsx`);
-    });
-
-    setupExportButton('.exportarPdf', function(data) { // PDF
-        if (typeof jspdf === 'undefined' || typeof jspdf.jsPDF === 'undefined') {
-            alert('La librería jsPDF no está cargada correctamente.');
-            return;
-        }
-        const { jsPDF } = jspdf; // Acceder a jsPDF desde el objeto global jspdf
-        const doc = new jsPDF();
         
-        const headers = [['ID', 'Código', 'Cliente', 'Ciudad', 'Contenido', 'Estado', 'Creación']];
-        const rows = data.map(item => [
-            item.ID, item.Código, item.Cliente, item.Ciudad, item.Contenido, item.Estado, item.Creación
-        ]);
-
-        doc.text('Reporte de Guías de Envío', 14, 15);
-        doc.autoTable({
-            head: headers,
-            body: rows,
-            startY: 25,
-            margin: { top: 20 },
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-        });
-        doc.save(`guias_exportacion_${new Date().toISOString().slice(0,10)}.pdf`);
-    });
-
-    // Seleccionar/Deseleccionar todos los checkboxes
-    const selectAllCheckbox = document.getElementById('select-all');
-    const rowCheckboxes = document.querySelectorAll('.select-row');
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            rowCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
+        console.log("XYZ_FILTRO_SCRIPT: Fin de la función iniciarScriptFiltroXYZ().");
     }
-});
+
+    if (document.readyState === 'complete' || (document.readyState !== 'loading' && !document.documentElement.doScroll)) {
+      console.log("XYZ_FILTRO_SCRIPT: DOM listo o casi listo, ejecutando iniciarScriptFiltroXYZ().");
+      iniciarScriptFiltroXYZ();
+    } else {
+      console.log("XYZ_FILTRO_SCRIPT: DOM aún no está listo, añadiendo listener DOMContentLoaded.");
+      document.addEventListener('DOMContentLoaded', iniciarScriptFiltroXYZ);
+    }
+})();
+//]]>
 </script>
 {% endblock %}

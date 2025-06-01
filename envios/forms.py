@@ -32,11 +32,14 @@ class StockForm(forms.ModelForm):
 class BodegaForm(forms.ModelForm):
     class Meta:
         model = Bodega
-        fields = ['nombre', 'direccion', 'telefono']
+        fields = ['nombre', 'direccion', 'telefono', 'ciudad'] # AÑADIR 'ciudad'
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'direccion': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'ciudad': forms.TextInput(attrs={'class': 'form-control'}), # Widget para ciudad
+            # Si usaste choices en el modelo para ciudad:
+            # 'ciudad': forms.Select(attrs={'class': 'form-control'}),
         }
 
 class GuiaEnvioForm(forms.ModelForm):

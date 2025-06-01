@@ -6,17 +6,19 @@
 <div class="products-container">
   <h1>Productos</h1>
   
-  <!-- Barra de acciones -->
-  <div class="products-actions">
-    <input type="text" id="search-input" placeholder="Buscar por ID, nombre, referencia..." class="search-input">
+   <!-- Barra de acciones -->
+  <div class="products-actions"> {# A ESTE DIV LE APLICAREMOS EL CAMBIO #}
+    <input type="text" id="search-input" 
+           placeholder="Buscar por ID, nombre, referencia..." 
+           class="search-input"
+           value="{{ search_query|default:'' }}">
     
-    <div class="action-buttons">
-      <a href="{% url 'listar_productos' %}" class="btn btn-secondary">
+    <div class="action-buttons-and-filters">
+      <a href="{% url 'listar_productos' %}" class="btn btn-secondary" title="Limpiar filtros y búsqueda">
         <i class="fas fa-sync-alt"></i> Limpiar
-    </a>
+      </a>
       <a href="{% url 'crear_producto' %}" class="btn crear">➕ Nuevo Producto</a>
       
-      <!-- Filtros -->
       <div class="filters">
         <select id="filter-precio" class="filter-select">
           <option value="">Todos los precios</option>
@@ -27,6 +29,7 @@
       </div>
     </div>
   </div>
+  <!-- Fin Barra de acciones -->
 
   <!-- Tabla de productos -->
   <div class="table-wrapper">
@@ -73,50 +76,128 @@
     </table>
   </div>
 </div>
+{# Estilos CSS para la barra de acciones y otros elementos. #}
+{# Es MEJOR mover estos estilos a tus archivos CSS globales. #}
+<style>
+    .products-actions {
+        display: flex;
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 20px;
+        
+        /* --- CAMBIO PRINCIPAL AQUÍ --- */
+        /* Aumenta el padding vertical para hacer la barra más "grande" */
+        padding: 1.5rem 1rem; /* Ejemplo: 1.5rem arriba/abajo, 1rem izq/der */
+        /* O puedes usar píxeles: padding: 24px 16px; */
+        /* --- FIN DEL CAMBIO PRINCIPAL --- */
+
+        background-color: #f9f9f9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        flex-wrap: wrap; 
+        gap: 15px; 
+    }
+
+    .search-input {
+        flex-grow: 1; 
+        min-width: 250px; 
+        height: 38px; 
+        padding: 0 10px; 
+        border: 1px solid #ddd; 
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+
+    .action-buttons-and-filters {
+        display: flex;
+        align-items: center;
+        gap: 10px; 
+    }
+
+    .action-buttons-and-filters .btn,
+    .action-buttons-and-filters .filter-select {
+        height: 38px;
+        display: inline-flex; 
+        align-items: center; 
+        padding: 0 15px; 
+        white-space: nowrap; 
+        box-sizing: border-box;
+    }
+    .action-buttons-and-filters .filter-select {
+        padding: 0 10px; 
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: white; 
+    }
+    
+    .btn.btn-secondary { background-color: #6c757d; color: white; border-color: #6c757d;}
+    .btn.crear { background-color: #28a745; color: white; border-color: #28a745;}
+
+    .img-thumb { /* ... */ }
+    .products-table .btn { /* ... */ }
+    /* ... (otros estilos que ya tenías) ... */
+</style>
+
+{% endblock %}
+
 
 {% block extra_js %}
+{# Tu JavaScript existente puede permanecer igual #}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Búsqueda instantánea
+  // Búsqueda instantánea (CLIENT-SIDE)
   const searchInput = document.getElementById('search-input');
   const tableRows = document.querySelectorAll('#products-table tbody tr');
   
-  searchInput.addEventListener('input', function() {
-    const term = this.value.trim().toLowerCase();
-    tableRows.forEach(row => {
-      const rowText = row.textContent.toLowerCase();
-      const rowId = row.dataset.id;
-      const rowNombre = row.dataset.nombre;
-      const rowReferencia = row.dataset.referencia;
-      
-      const match = rowText.includes(term) || 
-                   rowId.includes(term) || 
-                   rowNombre.includes(term) || 
-                   rowReferencia.includes(term);
-      
-      row.style.display = match ? '' : 'none';
+  if (searchInput && tableRows.length > 0) {
+    searchInput.addEventListener('input', function() {
+      applyFilters(); 
     });
-  });
+  } else { /* ... */ }
 
-  // Filtro por precio
   const filterPrecio = document.getElementById('filter-precio');
-  
-  filterPrecio.addEventListener('change', function() {
-    const value = this.value;
-    tableRows.forEach(row => {
-      const precio = parseFloat(row.dataset.precio);
-      let show = true;
-      
-      if (value === "0-50") show = precio >= 0 && precio <= 50;
-      else if (value === "50-100") show = precio > 50 && precio <= 100;
-      else if (value === "100+") show = precio > 100;
-      
-      if (row.style.display !== 'none') {
-        row.style.display = show ? '' : 'none';
-      }
+  if (filterPrecio) {
+    filterPrecio.addEventListener('change', function() {
+      applyFilters(); 
     });
-  });
+  } else { /* ... */ }
+
+  function applyFilters() {
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const precioFilterValue = filterPrecio ? filterPrecio.value : "";
+
+    tableRows.forEach(row => {
+      if (row.querySelector('td[colspan="8"]')) { 
+            row.style.display = ''; 
+            return;
+      }
+      let matchesSearch = true;
+      if (searchTerm) { /* ... lógica de búsqueda ... */ 
+        const rowId = row.dataset.id || '';
+        const rowNombre = row.dataset.nombre || '';
+        const rowReferencia = row.dataset.referencia || '';
+        matchesSearch = rowId.includes(searchTerm) || 
+                        rowNombre.includes(searchTerm) || 
+                        rowReferencia.includes(searchTerm);
+      }
+      let matchesPrecio = true;
+      if (precioFilterValue) { /* ... lógica de precio ... */ 
+        const precio = parseFloat(row.dataset.precio);
+        if (precioFilterValue === "0-50") matchesPrecio = precio >= 0 && precio <= 50;
+        else if (precioFilterValue === "50-100") matchesPrecio = precio > 50 && precio <= 100;
+        else if (precioFilterValue === "100+") matchesPrecio = precio > 100;
+      }
+      row.style.display = (matchesSearch && matchesPrecio) ? '' : 'none';
+    });
+  }
+
+  const selectAll = document.getElementById('select-all');
+  const checkboxes = document.querySelectorAll('.select-row');
+  // ... (lógica de select-all sin cambios) ...
+  if (selectAll) { /* ... */ }
+  checkboxes.forEach(checkbox => { /* ... */ });
+
 });
 </script>
-{% endblock %}
 {% endblock %}

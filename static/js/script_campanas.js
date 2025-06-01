@@ -1,5 +1,4 @@
-   // styles_campanas.css
-  let todasLasCampañas = []; // Para mantener una copia de todas las campañas originales
+let todasLasCampañas = []; // Para mantener una copia de todas las campañas originales
 
         window.onload = function() {
             cargarCampañasGuardadas();
@@ -26,7 +25,11 @@
             });
         };
 
-     
+        function regresar() {
+            console.log("Botón Regresar presionado. Redirigiendo..."); // Para depuración
+            // Cambia 'index.html' por el nombre real de tu página principal de generación de GUIs si es diferente.
+            window.location.href = 'index.html'; 
+        }
 
         function parseGuiString(guiString) {
             if (!guiString || typeof guiString !== 'string') return null;

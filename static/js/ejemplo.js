@@ -1,4 +1,4 @@
-
+//ejemplo
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('producto-search');
     const resultsContainer = document.getElementById('producto-results');

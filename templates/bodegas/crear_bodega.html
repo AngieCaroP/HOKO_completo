@@ -3,29 +3,51 @@
 {% block title %}Crear Bodega - HOKO{% endblock %}
 
 {% block content %}
-<div class="form-container">
-  <h1>Crear Bodega</h1>
+<div class="form-container" style="max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+  <h1 style="text-align: center; color: #333; margin-bottom: 20px;">Crear Bodega</h1>
 
   <form method="post">
     {% csrf_token %}
 
-    <div class="form-group">
-      <label for="{{ form.nombre.id_for_label }}">Nombre de la Bodega:</label>
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label for="{{ form.nombre.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre de la Bodega:</label>
       {{ form.nombre }}
+      {% if form.nombre.errors %}
+          <div class="errors" style="color: red; font-size: 0.9em; margin-top: 3px;">{{ form.nombre.errors }}</div>
+      {% endif %}
     </div>
 
-    <div class="form-group">
-      <label for="{{ form.direccion.id_for_label }}">Dirección:</label>
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label for="{{ form.direccion.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: bold;">Dirección:</label>
       {{ form.direccion }}
+      {% if form.direccion.errors %}
+          <div class="errors" style="color: red; font-size: 0.9em; margin-top: 3px;">{{ form.direccion.errors }}</div>
+      {% endif %}
     </div>
 
-    <div class="form-group">
-      <label for="{{ form.telefono.id_for_label }}">Teléfono:</label>
+    {# --- NUEVO CAMPO CIUDAD --- #}
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label for="{{ form.ciudad.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: bold;">Ciudad:</label>
+      {{ form.ciudad }}
+      {% if form.ciudad.errors %}
+          <div class="errors" style="color: red; font-size: 0.9em; margin-top: 3px;">{{ form.ciudad.errors }}</div>
+      {% endif %}
+    </div>
+    {# --- FIN NUEVO CAMPO CIUDAD --- #}
+
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label for="{{ form.telefono.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: bold;">Teléfono:</label>
       {{ form.telefono }}
+      {% if form.telefono.errors %}
+          <div class="errors" style="color: red; font-size: 0.9em; margin-top: 3px;">{{ form.telefono.errors }}</div>
+      {% endif %}
     </div>
 
-    <button type="submit" class="btn crear">Guardar</button>
-    <a href="{% url 'listar_stocks' %}" class="btn cancelar">✖ Cancelar</a>
+    <div style="text-align: right;">
+        <button type="submit" class="btn crear" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Guardar</button>
+        {# El enlace a listar_stocks parece incorrecto, debería ser listar_bodegas #}
+        <a href="{% url 'listar_bodegas' %}" class="btn cancelar" style="padding: 10px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-left: 10px;">✖ Cancelar</a>
+    </div>
   </form>
 </div>
 
